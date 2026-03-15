@@ -1,0 +1,2039 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1A7C4A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="קניות בית">
+<title>קניות בית 🛒</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --g1:#1A7C4A; --g2:#2AA65F; --g3:#52C97A; --mint:#E6F7EE;
+  --red:#EF4444; --reds:#FEF2F2; --ora:#F97316; --oras:#FFF7ED;
+  --bg:#F7F8FA; --card:#fff; --txt:#18181B; --txt2:#52525B; --muted:#A1A1AA;
+  --bdr:#E4E4E7; --div:#F4F4F5;
+  --sh:0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.05);
+  --sh2:0 8px 32px rgba(0,0,0,.12);
+  --r:18px; --r2:12px; --r3:8px;
+  --hdr:58px; --nav:72px;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:-webkit-fill-available}
+body{font-family:'Rubik',Arial,sans-serif;background:var(--bg);color:var(--txt);direction:rtl;
+  min-height:100vh;min-height:-webkit-fill-available;-webkit-font-smoothing:antialiased;font-size:15px;
+  overscroll-behavior:none}
+button{cursor:pointer;border:none;background:none;font-family:inherit;touch-action:manipulation}
+input,select,textarea{font-family:inherit}
+
+/* ── LAYOUT ── */
+.hdr{position:fixed;top:0;top:var(--st);left:50%;transform:translateX(-50%);
+  width:100%;max-width:600px;height:var(--hdr);background:var(--g1);color:#fff;
+  display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+  z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.hdr-title{font-size:19px;font-weight:800;display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
+.hdr-right{display:flex;gap:4px}
+.hdr-btn{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:20px;color:#fff;transition:background .15s}
+.hdr-btn:active{background:rgba(255,255,255,.2)}
+
+#alert-bar{position:fixed;top:calc(var(--hdr) + var(--st));left:50%;transform:translateX(-50%);
+  width:100%;max-width:600px;background:var(--red);color:#fff;padding:10px 18px;
+  font-size:13px;font-weight:700;z-index:190;text-align:center;display:none;
+  box-shadow:0 2px 8px rgba(239,68,68,.35)}
+
+#main{max-width:600px;margin:0 auto;
+  padding-top:calc(var(--hdr) + var(--st) + 16px);
+  padding-bottom:calc(var(--nav) + var(--sb) + 24px);
+  padding-left:16px;padding-right:16px}
+#main.has-alert{padding-top:calc(var(--hdr) + var(--st) + 46px + 16px)}
+
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:600px;height:calc(var(--nav) + var(--sb));
+  padding-bottom:var(--sb);background:#fff;display:flex;
+  border-top:1px solid var(--bdr);z-index:200;box-shadow:0 -2px 16px rgba(0,0,0,.06)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;color:var(--muted);transition:color .15s;position:relative;user-select:none}
+.nav-btn.on{color:var(--g1)}
+.nav-btn.on::before{content:'';position:absolute;top:0;width:28px;height:3px;
+  background:var(--g1);border-radius:0 0 3px 3px}
+.nav-icon{font-size:22px;line-height:1}
+.nav-lbl{font-size:10px;font-weight:700;letter-spacing:.2px}
+.nav-badge{position:absolute;top:5px;left:50%;margin-left:4px;min-width:17px;height:17px;
+  background:var(--red);color:#fff;border-radius:9px;font-size:10px;font-weight:800;
+  display:none;align-items:center;justify-content:center;padding:0 4px}
+
+.fab{position:fixed;left:18px;bottom:calc(var(--nav) + var(--sb) + 16px);
+  width:56px;height:56px;border-radius:50%;background:var(--g1);color:#fff;
+  font-size:28px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(26,124,74,.5);z-index:190;transition:all .2s;line-height:1}
+.fab:active{transform:scale(.91)}
+
+/* ── CARDS ── */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:12px}
+.card-hdr{padding:14px 18px;border-bottom:1px solid var(--div);display:flex;align-items:center;justify-content:space-between}
+.card-ttl{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sec{margin-bottom:20px}
+.sec-ttl{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+
+/* ── CATEGORY ICON (Bring!-style) ── */
+.cat-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-size:22px;flex-shrink:0}
+
+/* ── ITEM ROWS ── */
+.item-row{display:flex;align-items:center;padding:13px 16px;gap:13px;direction:ltr;
+  border-bottom:1px solid var(--div);min-height:66px;transition:background .12s;background:#fff}
+.item-row:last-child{border-bottom:none}
+.item-row:active{background:var(--bg)}
+.item-row.done{opacity:.5;background:#fff}
+.i-info{flex:1;min-width:0;direction:rtl}
+.i-name{font-size:15px;font-weight:600;line-height:1.3;color:var(--txt)}
+.i-name.thru{text-decoration:line-through;color:var(--muted)}
+.i-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.i-acts{display:flex;align-items:center;gap:8px;flex-shrink:0}
+/* ── ITEM ACTIONS (right side) ── */
+.item-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.item-qty{font-size:13px;font-weight:600;color:var(--txt2);white-space:nowrap;min-width:28px;text-align:center}
+.item-menu{width:36px;height:36px;background:var(--g1);border-radius:9px;color:#fff;
+  font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  letter-spacing:0;line-height:1;transition:all .14s}
+.item-menu:active{transform:scale(.86);background:var(--g2)}
+.item-menu.done{background:var(--mint);color:var(--g1);font-size:16px}
+.item-chk{width:28px;height:28px;border:2px solid var(--bdr);border-radius:8px;flex-shrink:0;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.item-chk.on{background:var(--g1);border-color:var(--g1)}
+.item-chk.on::after{content:'✓';color:#fff;font-size:15px;font-weight:700}
+.item-del{width:28px;height:28px;background:var(--div);border-radius:7px;
+  color:var(--muted);font-size:14px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .14s}
+.item-del:active{background:var(--reds);color:var(--red)}
+
+/* ── STATUS ── */
+.pill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;
+  font-size:11px;font-weight:700;gap:3px;white-space:nowrap}
+.pill.urg{background:var(--reds);color:var(--red)}
+.pill.soo{background:var(--oras);color:var(--ora)}
+.pill.ok{background:var(--mint);color:var(--g2)}
+.pill.gray{background:var(--div);color:var(--muted)}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:var(--card);border-radius:var(--r2);padding:16px 10px;
+  text-align:center;box-shadow:var(--sh)}
+.stat-n{font-size:34px;font-weight:800;line-height:1;margin-bottom:4px}
+.stat-l{font-size:11px;font-weight:600;color:var(--muted)}
+.stat-card.urg .stat-n{color:var(--red)}
+.stat-card.soo .stat-n{color:var(--ora)}
+.stat-card.ok  .stat-n{color:var(--g2)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px 20px;border-radius:var(--r2);font-size:14px;font-weight:700;
+  cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn:active{transform:scale(.96)}
+.btn.pri{background:var(--g1);color:#fff}
+.btn.sec{background:var(--mint);color:var(--g1)}
+.btn.dan{background:var(--reds);color:var(--red)}
+.btn.out{background:transparent;border:1.5px solid var(--bdr);color:var(--txt)}
+.btn.ghost{background:transparent;color:var(--g1);font-weight:700}
+.btn.sm{padding:7px 14px;font-size:13px;border-radius:10px}
+.btn.xs{padding:5px 10px;font-size:12px;border-radius:8px}
+.btn.full{width:100%}
+
+.chk{width:34px;height:34px;border-radius:50%;border:2px solid var(--bdr);
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  color:transparent;background:#fff;flex-shrink:0;transition:all .2s}
+.chk.on{background:var(--g1);border-color:var(--g1);color:#fff}
+.chk:active{transform:scale(.87)}
+
+.ibtn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:18px;background:var(--div);flex-shrink:0}
+.ibtn:active{background:var(--bdr)}
+
+/* ── TOGGLE ── */
+.tog{width:44px;height:26px;background:var(--bdr);border-radius:13px;position:relative;
+  cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--g1)}
+.tog::after{content:'';position:absolute;width:20px;height:20px;background:#fff;
+  border-radius:50%;top:3px;right:3px;transition:transform .2s;
+  box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.tog.on::after{transform:translateX(-18px)}
+
+/* ── CATEGORY FILTER CHIPS ── */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:8px 14px;
+  border-radius:24px;font-size:13px;font-weight:600;background:var(--card);
+  color:var(--muted);border:1.5px solid var(--bdr);cursor:pointer;transition:all .15s}
+.chip.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+.chip:active{opacity:.7}
+
+/* ── GROUP HEADER ── */
+.grp-hdr{padding:9px 16px;font-size:11px;font-weight:800;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.8px;background:var(--div);
+  display:flex;align-items:center;justify-content:center;gap:6px;text-align:center}
+
+/* ── FORMS ── */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.fi{width:100%;padding:13px 15px;border:1.5px solid var(--bdr);border-radius:var(--r2);
+  font-size:15px;color:var(--txt);background:#fff;direction:rtl;
+  -webkit-appearance:none;transition:border-color .15s}
+.fi:focus{outline:none;border-color:var(--g2)}
+.fi::placeholder{color:var(--muted)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fsel{width:100%;padding:13px 15px;border:1.5px solid var(--bdr);border-radius:var(--r2);
+  font-size:16px;color:var(--txt);background:#fff;direction:rtl;
+  -webkit-appearance:none}
+.fsel:focus{outline:none;border-color:var(--g2)}
+.fta{width:100%;padding:13px 15px;border:1.5px solid var(--bdr);border-radius:var(--r2);
+  font-size:15px;color:var(--txt);background:#fff;direction:rtl;resize:none;min-height:100px}
+.fta:focus{outline:none;border-color:var(--g2)}
+
+/* ── MODAL / BOTTOM SHEET ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;
+  display:flex;align-items:flex-end;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.sheet{background:var(--card);border-radius:var(--r) var(--r) 0 0;width:100%;
+  max-height:92vh;overflow-y:auto;padding-bottom:max(20px,var(--sb));
+  animation:sheetup .28s cubic-bezier(.34,1.08,.64,1);-webkit-overflow-scrolling:touch}
+@keyframes sheetup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:40px;height:4px;background:var(--bdr);border-radius:2px;margin:12px auto 4px}
+.sheet-hdr{padding:6px 18px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--div)}
+.sheet-ttl{font-size:18px;font-weight:800}
+.sheet-close{width:32px;height:32px;border-radius:50%;background:var(--div);
+  font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.sheet-body{padding:20px}
+
+/* ── SETTINGS PANEL ── */
+.spanel{position:fixed;top:0;bottom:0;left:0;right:0;background:var(--bg);
+  z-index:400;overflow-y:auto;padding-top:var(--st);animation:slin .25s ease}
+@keyframes slin{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.sp-hdr{background:var(--g1);color:#fff;height:var(--hdr);display:flex;
+  align-items:center;gap:12px;padding:0 18px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.sp-body{padding:20px}
+.sp-sec{margin-bottom:24px}
+.sp-sec-ttl{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:10px}
+.sp-card{background:var(--card);border-radius:var(--r2);box-shadow:var(--sh);overflow:hidden}
+.sp-row{padding:14px 16px;border-bottom:1px solid var(--div);display:flex;
+  align-items:center;justify-content:space-between;gap:12px}
+.sp-row:last-child{border-bottom:none}
+.sp-lbl{font-size:15px;font-weight:500}
+
+/* ── UPLOAD ── */
+.upload-area{border:2px dashed var(--bdr);border-radius:var(--r);padding:28px 20px;
+  text-align:center;background:var(--card);position:relative;cursor:pointer;transition:all .2s}
+.upload-area:active,.upload-area.drag{border-color:var(--g1);background:var(--mint)}
+.upload-area input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.fchips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.fchip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;
+  background:var(--mint);color:var(--g1);border-radius:8px;font-size:12px;font-weight:700}
+.fchip-x{font-size:16px;cursor:pointer;color:var(--g2)}
+
+/* ── SPINNER ── */
+.spinner{width:40px;height:40px;border:3px solid var(--mint);border-top-color:var(--g1);
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:52px 20px}
+.loading p{margin-top:14px;color:var(--muted);font-size:14px;line-height:1.6}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:calc(var(--hdr) + var(--st) + 12px);left:50%;
+  transform:translateX(-50%);background:var(--txt);color:#fff;padding:12px 22px;
+  border-radius:40px;font-size:14px;font-weight:600;z-index:600;white-space:nowrap;
+  box-shadow:var(--sh2);display:flex;align-items:center;gap:8px;
+  max-width:calc(100vw - 32px);animation:tin .28s cubic-bezier(.34,1.2,.64,1)}
+@keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.94)}}
+.toast.hide{animation:tout .2s ease forwards}
+@keyframes tout{to{opacity:0;transform:translateX(-50%) translateY(-8px) scale(.9)}}
+.toast.pri{background:var(--g1)} .toast.dan{background:var(--red)} .toast.wrn{background:var(--ora)}
+
+/* ── PROGRESS BAR ── */
+.prog{height:5px;background:var(--div);border-radius:3px;overflow:hidden;margin-top:7px}
+.prog-fill{height:100%;border-radius:3px;transition:width .4s}
+.prog-fill.urg{background:var(--red)} .prog-fill.soo{background:var(--ora)} .prog-fill.ok{background:var(--g3)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:56px 24px;color:var(--muted)}
+.empty-ico{font-size:56px;margin-bottom:16px}
+.empty-ttl{font-size:18px;font-weight:700;color:var(--txt);margin-bottom:8px}
+.empty-sub{font-size:14px;line-height:1.7;max-width:280px;margin:0 auto 20px}
+
+
+/* ── IMPORT AREA ── */
+.import-tabs{display:flex;border-bottom:1px solid var(--div);margin-bottom:16px}
+.import-tab{flex:1;padding:12px;text-align:center;font-size:14px;font-weight:600;
+  color:var(--muted);cursor:pointer;transition:all .15s;border-bottom:3px solid transparent}
+.import-tab.on{color:var(--g1);border-bottom-color:var(--g1)}
+
+/* ── DIVIDER ── */
+.divlbl{display:flex;align-items:center;gap:10px;color:var(--muted);
+  font-size:12px;font-weight:700;margin:14px 0 8px}
+.divlbl::before,.divlbl::after{content:'';flex:1;height:1px;background:var(--bdr)}
+
+
+/* ── WIZARD ── */
+.wizard-ov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;
+  display:flex;align-items:flex-end;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.wizard-card{background:var(--card);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:600px;
+  max-height:92vh;overflow-y:auto;margin:0 auto;padding-bottom:max(24px,var(--sb));
+  animation:sheetup .35s cubic-bezier(.34,1.08,.64,1)}
+.wiz-prog{display:flex;gap:6px;justify-content:center;padding:16px 20px 0}
+.wiz-dot{width:8px;height:8px;border-radius:50%;background:var(--bdr);transition:all .25s}
+.wiz-dot.on{background:var(--g1);width:24px;border-radius:4px}
+.wiz-step{padding:4px 20px 20px}
+.wiz-ico{font-size:60px;text-align:center;margin-bottom:14px;margin-top:10px}
+.wiz-ttl{font-size:22px;font-weight:800;text-align:center;margin-bottom:8px}
+.wiz-sub{font-size:15px;color:var(--txt2);text-align:center;line-height:1.65;margin-bottom:20px}
+
+/* ── SETUP CARD (home) ── */
+.setup-card{background:linear-gradient(135deg,#0F3D26 0%,var(--g1) 60%,var(--g2) 100%);
+  color:#fff;border-radius:var(--r);padding:20px;margin-bottom:20px}
+.setup-steps{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+.setup-step-row{display:flex;align-items:center;gap:10px;font-size:14px}
+.step-dot{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+
+/* ── POST-SHOPPING ── */
+.post-item{display:flex;align-items:center;padding:11px 16px;gap:12px;
+  border-bottom:1px solid var(--div);cursor:pointer;transition:background .1s;user-select:none}
+.post-item:last-child{border-bottom:none}
+.post-item:active{background:var(--bg)}
+.post-item.sel{background:var(--mint)}
+.post-item.sel .chk{background:var(--g1);border-color:var(--g1);color:#fff}
+
+/* ── DESKTOP ── */
+@media(min-width:620px){
+  body{background:#C8DDD4}
+  .hdr,.nav,#alert-bar{border-left:1px solid rgba(0,0,0,.06);border-right:1px solid rgba(0,0,0,.06)}
+  .nav{border-radius:16px 16px 0 0}
+  #main{box-shadow:var(--sh2);background:var(--bg);min-height:100vh}
+  .fab{left:calc(50% - 284px)}
+  .spanel{max-width:600px;left:50%;right:auto;transform:translateX(-50%)}
+  .overlay{justify-content:center}
+  .sheet{max-width:600px;border-radius:var(--r) var(--r) 0 0}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-title">🛒 קניות בית</div>
+  <div class="hdr-right">
+    <button class="hdr-btn" id="btn-import" title="ייבוא פריטים">📸</button>
+    <button class="hdr-btn" id="btn-settings" title="הגדרות" style="position:relative">⚙️</button>
+  </div>
+</header>
+
+<div id="alert-bar"></div>
+<main id="main"></main>
+
+<nav class="nav">
+  <button class="nav-btn on" data-tab="shop">
+    <div class="nav-icon">🛒</div><div class="nav-lbl">קניות</div>
+  </button>
+  <button class="nav-btn" data-tab="staples">
+    <div class="nav-icon">🗄️</div><div class="nav-lbl">מאגר</div>
+  </button>
+</nav>
+
+<button class="fab" id="fab">+</button>
+<div id="overlay" style="display:none" class="overlay"></div>
+<div id="spanel" style="display:none" class="spanel"></div>
+<div id="wizard" style="display:none" class="wizard-ov">
+  <div class="wizard-card">
+    <div class="sheet-handle"></div>
+    <div id="wizard-inner"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// CATEGORY STYLES
+// ══════════════════════════════════════════
+const CS = {
+  baby:    {bg:'#FFF0F3',e:'👶',l:'תינוקות וילדים'},
+  dairy:   {bg:'#EFF6FF',e:'🥛',l:'חלב וביצים'},
+  bread:   {bg:'#FFFBEB',e:'🍞',l:'לחם ומאפים'},
+  produce: {bg:'#F0FDF4',e:'🥦',l:'פירות וירקות'},
+  pantry:  {bg:'#FEFCE8',e:'🥫',l:'מזון יבש'},
+  hygiene: {bg:'#FAF5FF',e:'🧴',l:'היגיינה'},
+  cleaning:{bg:'#F0F9FF',e:'🧹',l:'ניקיון'},
+  snacks:  {bg:'#FFF7ED',e:'🍿',l:'חטיפים'},
+  frozen:  {bg:'#F0FFFE',e:'❄️',l:'קפוא'},
+  meat:    {bg:'#FFF5F5',e:'🥩',l:'בשר ודגים'},
+  custom:  {bg:'#F8FAFC',e:'📦',l:'אחר'},
+};
+
+const FREQS = [
+  {v:7, l:'שבועי'},
+  {v:21,l:'דו-שבועי'},
+  {v:35,l:'חודשי'},
+  {v:60,l:'דו-חודשי'},
+];
+// Map avg_order_interval_days → FREQS bucket value
+// Midpoints: שבועי <14d, דו-שבועי <28d, חודשי <48d, דו-חודשי ≥48d
+function freqBucket(days){
+  const d=Math.max(1,Math.round(days));
+  if(d<14)return 7;
+  if(d<28)return 21;
+  if(d<48)return 35;
+  return 60;
+}
+// Returns true if today falls within the given season (Israel climate)
+function isInSeason(seasonCat){
+  if(!seasonCat||seasonCat==='כל השנה')return true;
+  const m=new Date().getMonth()+1; // 1-12
+  if(seasonCat==='קיץ')return m>=6&&m<=8;
+  if(seasonCat==='סתיו')return m>=9&&m<=11;
+  if(seasonCat==='חורף')return m===12||m<=2;
+  if(seasonCat==='אביב')return m>=3&&m<=5;
+  return true;
+}
+
+
+// ══════════════════════════════════════════
+// DEFAULT DATA
+// ══════════════════════════════════════════
+const DEFAULT_STAPLES = [
+  {id:'s5', n:'מזון מוצקים',       c:'baby',    e:'🥕', q:'6',  u:'יח׳',   f:7 },
+  {id:'s6', n:'חלב',               c:'dairy',   e:'🥛', q:'3',  u:'קרטון', f:5 },
+  {id:'s7', n:'ביצים',             c:'dairy',   e:'🥚', q:'2',  u:'קרטון', f:7 },
+  {id:'s9', n:'גבינה צהובה',       c:'dairy',   e:'🧀', q:'1',  u:'חבילה', f:7 },
+  {id:'s10',n:'קוטג׳',             c:'dairy',   e:'🥛', q:'2',  u:'יח׳',   f:7 },
+  {id:'s11',n:'לחם',               c:'bread',   e:'🍞', q:'2',  u:'כיכר',  f:4 },
+  {id:'s12',n:'פיתות',             c:'bread',   e:'🫓', q:'1',  u:'אריזה', f:7 },
+  {id:'s13',n:'בננות',             c:'produce', e:'🍌', q:'1',  u:'אשכול', f:5 },
+  {id:'s14',n:'תפוחים',            c:'produce', e:'🍎', q:'1',  u:'ק״ג',   f:7 },
+  {id:'s15',n:'מלפפון',            c:'produce', e:'🥒', q:'1',  u:'ק״ג',   f:5 },
+  {id:'s16',n:'עגבניות',           c:'produce', e:'🍅', q:'1',  u:'ק״ג',   f:5 },
+  {id:'s17',n:'גזר',               c:'produce', e:'🥕', q:'1',  u:'ק״ג',   f:7 },
+  {id:'s18',n:'אבוקדו',            c:'produce', e:'🥑', q:'3',  u:'יח׳',   f:7 },
+  {id:'s19',n:'אורז',              c:'pantry',  e:'🍚', q:'1',  u:'ק״ג',   f:30},
+  {id:'s20',n:'פסטה',              c:'pantry',  e:'🍝', q:'2',  u:'חבילה', f:21},
+  {id:'s21',n:'שמן זית',           c:'pantry',  e:'🫙', q:'1',  u:'בקבוק', f:30},
+  {id:'s22',n:'רסק עגבניות',       c:'pantry',  e:'🥫', q:'4',  u:'יח׳',   f:21},
+  {id:'s23',n:'טונה',              c:'pantry',  e:'🐟', q:'4',  u:'יח׳',   f:14},
+  {id:'s24',n:'נייר טואלט',        c:'cleaning',e:'🧻', q:'1',  u:'חבילה', f:21},
+  {id:'s28',n:'סבון כלים',         c:'cleaning',e:'🍽️',q:'1',  u:'בקבוק', f:21},
+  {id:'s29',n:'אבקת כביסה',        c:'cleaning',e:'👕', q:'1',  u:'קופסה', f:30},
+  {id:'s30',n:'שקיות אשפה',        c:'cleaning',e:'🗑️',q:'1',  u:'חבילה', f:30},
+  {id:'s31',n:'במבה / ביסלי',      c:'snacks',  e:'🥜', q:'3',  u:'אריזה', f:7 },
+  {id:'s32',n:'חטיפי אורז',        c:'snacks',  e:'🍘', q:'2',  u:'חבילה', f:7 },
+  {id:'s33',n:'ירקות קפואים',      c:'frozen',  e:'🥦', q:'2',  u:'שקית',  f:14},
+  {id:'s34',n:'שניצל קפוא',        c:'frozen',  e:'🍗', q:'1',  u:'חבילה', f:14},
+  {id:'s35',n:'בשר טחון',          c:'meat',    e:'🥩', q:'500',u:'ג׳',    f:7 },
+  {id:'s36',n:'חזה עוף',           c:'meat',    e:'🍗', q:'600',u:'ג׳',    f:7 },
+];
+
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let S = {
+  staples:[], weekly:[],
+  settings:{apiKey:'',model:'claude-opus-4-6'},
+  tab:'shop', catFilt:'all',
+  setupDone:false, wizardStep:0, purchaseLog:[], analysisRecs:null, pendingSuggestions:[],
+};
+
+function load(){
+  try{const d=localStorage.getItem('kb3');if(d){const p=JSON.parse(d);S={...S,...p};}}catch(e){}
+}
+function save(){try{localStorage.setItem('kb3',JSON.stringify(S));}catch(e){}}
+
+// ══════════════════════════════════════════
+// URGENCY
+// ══════════════════════════════════════════
+function daysSince(d){return d?((Date.now()-new Date(d).getTime())/86400000):null}
+function stStatus(st){
+  if(!st.active)return'off';
+  const d=daysSince(st.lastOrdered);
+  if(d===null)return'never';
+  if(d>=st.f)return'urg';
+  if(d>=st.f*.75)return'soo';
+  return'ok';
+}
+function stCounts(){
+  const a=S.staples.filter(s=>s.active);
+  return{urg:a.filter(s=>stStatus(s)==='urg').length,
+         soo:a.filter(s=>stStatus(s)==='soo').length,
+         ok: a.filter(s=>stStatus(s)==='ok').length};
+}
+function freqLbl(v){const f=FREQS.find(x=>x.v===v);return f?f.l:`כל ${v} ימים`}
+
+// ══════════════════════════════════════════
+// WEEKLY ACTIONS
+// ══════════════════════════════════════════
+function genWeekly(){
+  const toAdd=S.staples.filter(s=>{
+    if(!s.active)return false;
+    if(s.seasonCat&&!isInSeason(s.seasonCat))return false;
+    const st=stStatus(s);
+    // 'never' (lastOrdered:null) only qualifies for manually-added items.
+    // Analysis items have lastOrdered set to past-due date so they enter via 'urg' instead.
+    if(st==='never'&&!s.manual)return false;
+    if(st!=='urg'&&st!=='soo'&&st!=='never')return false;
+    // Check by sid OR by normalized name (catches apostrophe variants)
+    return!S.weekly.find(w=>!w.done&&(w.sid===s.id||normN(w.n)===normN(s.n)));
+  });
+  S.weekly=[...S.weekly,...toAdd.map((s,i)=>({
+    id:'w'+s.id+'_'+Date.now()+'_'+i,sid:s.id,n:s.n,e:s.e,c:s.c,q:s.q,u:s.u,done:false,manual:false
+  }))];
+  save();
+}
+function toggleW(wid){
+  const w=S.weekly.find(x=>x.id===wid);if(!w)return;
+  w.done=!w.done;
+  if(w.done&&w.sid){const st=S.staples.find(s=>s.id===w.sid);if(st)st.lastOrdered=new Date().toISOString();}
+  save();
+}
+function removeW(wid){S.weekly=S.weekly.filter(w=>w.id!==wid);save();}
+function clearDone(){S.weekly=S.weekly.filter(w=>!w.done);save();}
+function addManualW(n,e,c,q,u,oneTime){
+  const item={id:'wm'+Date.now(),sid:null,n,e:e||CS[c]?.e||'📦',c:c||'custom',q:q||'1',u:u||'יח׳',done:false,manual:true};
+  if(oneTime)item.one_time=true;
+  S.weekly.push(item);
+  save();
+}
+function quickAdd(sid){
+  const s=S.staples.find(x=>x.id===sid);
+  if(!s||S.weekly.find(w=>w.sid===sid&&!w.done))return;
+  S.weekly.push({id:'w'+sid+Date.now(),sid:s.id,n:s.n,e:s.e,c:s.c,q:s.q,u:s.u,done:false,manual:false});
+  save();
+}
+
+// ══════════════════════════════════════════
+// STAPLE ACTIONS
+// ══════════════════════════════════════════
+function toggleActive(sid){const s=S.staples.find(x=>x.id===sid);if(s){s.active=!s.active;save();}}
+function updStaple(sid,upd){const s=S.staples.find(x=>x.id===sid);if(s){Object.assign(s,upd);save();}}
+function markOrdered(sid){
+  const s=S.staples.find(x=>x.id===sid);if(!s)return;
+  s.lastOrdered=new Date().toISOString();
+  const w=S.weekly.find(x=>x.sid===sid&&!x.done);if(w)w.done=true;
+  save();
+}
+function addStaple(n,c,e,q,u,f,manual,seasonCat){
+  const freq=parseInt(f);
+  // Manual items start as 'never ordered' → immediately appear in shopping list.
+  // Analysis items get lastOrdered set to one full period ago → status 'urg' → appear via normal scheduling, not via the 'never' backdoor.
+  const lastOrdered=manual?null:new Date(Date.now()-freq*86400000).toISOString();
+  const obj={id:'sc'+Date.now()+'_'+S.staples.length,n,c,e:e||CS[c]?.e||'📦',q,u,f:freq,lastOrdered,active:true,manual:!!manual};
+  if(seasonCat&&seasonCat!=='כל השנה')obj.seasonCat=seasonCat;
+  S.staples.push(obj);
+  save();
+}
+function delStaple(sid){S.staples=S.staples.filter(s=>s.id!==sid);S.weekly=S.weekly.filter(w=>w.sid!==sid);save();}
+
+// Normalize name: treat all apostrophe/geresh variants as identical, trim whitespace
+function normN(n){return String(n).replace(/[\u05F3\u2018\u2019\u02BC`]/g,"'").trim();}
+
+// Cleanup: remove unwanted items, merge variants, deduplicate, sync weekly
+function cleanupStaples(){
+  // Fix duplicate staple IDs (caused by same-millisecond addStaple calls)
+  const seenIds=new Set();let hadDupIds=false;
+  S.staples.forEach((s,i)=>{
+    if(seenIds.has(s.id)){
+      s.id='sc'+Date.now()+'_'+i+'_fix';hadDupIds=true;
+    }
+    seenIds.add(s.id);
+  });
+  // If IDs were duplicated, weekly item sid references may be wrong — clear and regenerate
+  if(hadDupIds){S.weekly=S.weekly.filter(w=>w.manual);}
+
+  const REMOVE=['חיתולים','קרמיות לתינוק','דייסת תינוק','מגבונים לח','יוגורט ילדים',
+                'שמפו','סבון ידיים','משחת שיניים'];
+  const BLACKLIST_PAT=/wolt\+|מנוי|subscription|סיגריות/i;
+  // Remove unwanted staples and service-charge items
+  S.staples=S.staples.filter(s=>!REMOVE.includes(normN(s.n))&&!BLACKLIST_PAT.test(s.n));
+  // Normalize apostrophes in all staple names
+  S.staples.forEach(s=>{ s.n=normN(s.n); });
+  // Fix category overrides
+  S.staples.forEach(s=>{if(s.n==='נייר טואלט')s.c='cleaning';});
+  // Fix wrong default quantities from old data
+  S.staples.forEach(s=>{if(s.n==='חלב'&&s.q==='4'&&s.u==='קרטון'){s.q='3';s.f=5;}});
+  // Merge variant groups: keep lowest f (most frequent), rename to base
+  const GROUPS=[
+    {base:'גמדים',     pat:/^גמדים[\s\-]/},
+    {base:'קולה זירו', pat:/^קולה זירו/},
+    {base:'לחמניות',   pat:/לחמניות/},
+  ];
+  GROUPS.forEach(({base,pat})=>{
+    const matches=S.staples.filter(s=>pat.test(s.n)||s.n===base);
+    if(matches.length>0){
+      matches[0].n=base;
+      if(matches.length>1){
+        matches[0].f=Math.min(...matches.map(s=>s.f));
+        const totalQ=matches.reduce((sum,s)=>sum+(parseFloat(s.q)||1),0);
+        matches[0].q=String(Math.round(totalQ));
+        const rm=new Set(matches.slice(1).map(s=>s.id));
+        S.staples=S.staples.filter(s=>!rm.has(s.id));
+      }
+    }
+  });
+  // Deduplicate staples by NORMALIZED name — keeps first, but merges to lower f
+  const seenMap=new Map(); // normN → staple object
+  S.staples=S.staples.filter(s=>{
+    const k=normN(s.n);
+    if(seenMap.has(k)){
+      const kept=seenMap.get(k);
+      if(s.f<kept.f)kept.f=s.f; // keep most-frequent across duplicates
+      return false;
+    }
+    seenMap.set(k,s);
+    return true;
+  });
+  // Sync weekly: remove items for deleted staples or banned names
+  const validSids=new Set(S.staples.map(s=>s.id));
+  S.weekly=S.weekly.filter(w=>w.manual||(validSids.has(w.sid)&&!REMOVE.includes(normN(w.n))));
+  // Deduplicate weekly by NORMALIZED name+done-state
+  const seenW=new Set();
+  S.weekly=S.weekly.filter(w=>{
+    const k=normN(w.n)+(w.done?'✓':'');
+    if(seenW.has(k))return false;
+    seenW.add(k);
+    return true;
+  });
+  save();
+}
+
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function catIco(c,size=44){const cs=CS[c]||CS.custom;return`<div class="cat-ico" style="width:${size}px;height:${size}px;background:${cs.bg};font-size:${Math.round(size*.5)}px">${cs.e}</div>`}
+function statusPill(st){
+  if(st==='ok'||st==='off')return'';
+  const m={urg:'🔴 דחוף',soo:'🟠 בקרוב',never:'⬜ לא הוזמן'};
+  return`<span class="pill ${st}">${m[st]||''}</span>`;
+}
+
+// ══════════════════════════════════════════
+// RENDER: SHOPPING
+// ══════════════════════════════════════════
+function wIco(w,size=42){const bg=(CS[w.c]||CS.custom).bg;return w.e?`<div class="cat-ico" style="width:${size}px;height:${size}px;background:${bg};font-size:${Math.round(size*.52)}px">${w.e}</div>`:catIco(w.c,size);}
+function renderShop(){
+  const pend=S.weekly.filter(w=>!w.done);
+  const done=S.weekly.filter(w=>w.done);
+  const lastShop=(S.purchaseLog&&S.purchaseLog.length>0)?S.purchaseLog[0]:null;
+  const daysAgo=lastShop?Math.round((Date.now()-new Date(lastShop.date).getTime())/86400000):null;
+  let h='';
+  if(!S.setupDone){
+    h+=`<div class="setup-card">
+      <div style="font-size:16px;font-weight:800;margin-bottom:4px">🚀 הגדרת האפליקציה</div>
+      <div style="font-size:13px;opacity:.85;line-height:1.5">הגדר פעם אחת לניהול קניות חכם למשפחה</div>
+      <div class="setup-steps">
+        <div class="setup-step-row"><div class="step-dot">1</div><div>ייבא היסטוריית Wolt — AI ינתח ויציע מאגר</div></div>
+        <div class="setup-step-row"><div class="step-dot">2</div><div>אשר פריטי מאגר</div></div>
+      </div>
+      <button class="btn" style="background:rgba(255,255,255,.2);color:#fff;width:100%;margin-top:16px;font-size:15px;padding:13px;border-radius:var(--r2)" onclick="openWizard()">התחל הגדרה ←</button>
+    </div>`;
+  }
+  h+=`<button class="btn out full" data-a="post-shop" style="margin-bottom:12px;border-color:var(--g2);color:var(--g1);font-size:14px;padding:14px">
+    🛍️ חזרתי מהקנייה — עדכן מלאי${daysAgo!==null?` (לפני ${daysAgo} ימים)`:''}</button>`;
+  h+=`<div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn sec" style="flex:1" data-a="gw">✨ רענן רשימה</button>
+    <button class="btn pri" style="flex:1" data-a="open-import">📸 ייבא / הוסף</button>
+  </div>`;
+  if(S.weekly.length===0){
+    h+=`<div class="empty"><div class="empty-ico">🛒</div>
+      <div class="empty-ttl">הרשימה ריקה</div>
+      <div class="empty-sub">לחץ "רענן רשימה" להוספת פריטים, או "ייבא / הוסף" להוספה ידנית.</div></div>`;
+    return h;
+  }
+  const FREQ_SECS=[
+    {max:14, lbl:'📅 שבועי'},
+    {max:30, lbl:'🗓️ דו-שבועי'},
+    {max:42, lbl:'📆 חודשי'},
+    {max:Infinity, lbl:'🗃️ דו-חודשי'},
+  ];
+  FREQ_SECS.forEach((sec,i)=>{
+    const prevMax=i>0?FREQ_SECS[i-1].max:0;
+    const items=S.weekly.filter(w=>{const f=S.staples.find(s=>s.id===w.sid)?.f||7;return f<=sec.max&&f>prevMax;});
+    if(!items.length)return;
+    h+=`<div class="card"><div class="grp-hdr">${sec.lbl}</div><div>`;
+    items.forEach(w=>{
+      const oneTimeTag=w.one_time?`<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:var(--oras);color:var(--ora);margin-right:4px">חד-פעמי</span>`:'';
+      h+=`<div class="item-row${w.done?' done':''}">
+        ${wIco(w,44)}
+        <div class="i-info"><div class="i-name${w.done?' thru':''}">${esc(w.n)}${oneTimeTag}</div>
+          <div class="i-meta">${esc(w.q)} ${esc(w.u)}</div>
+        </div>
+        <div class="item-right">
+          <div class="item-chk${w.done?' on':''}" data-a="tw" data-wid="${w.id}"></div>
+        </div></div>`;
+    });
+    h+=`</div></div>`;
+  });
+  if(done.length>0){
+    h+=`<button class="btn out full" data-a="cd" style="margin-bottom:12px">נקה מסומנים (${done.length})</button>`;
+  }
+  return h;
+}
+
+// ══════════════════════════════════════════
+// RENDER: STAPLES
+// ══════════════════════════════════════════
+function renderStaples(){
+  const cats=['all',...Object.keys(CS).filter(k=>S.staples.some(s=>s.c===k))];
+  const filt=S.catFilt==='all'?S.staples:S.staples.filter(s=>s.c===S.catFilt);
+  let h=`<button class="btn pri full" style="margin-bottom:8px" data-a="manual-add">+ הוסף פריט ידנית</button>`;
+  h+=`<button class="btn sec full" style="margin-bottom:12px" data-a="calibrate">✨ כייל תדירויות עם AI</button>`;
+  h+=`<div class="chips">`;
+  cats.forEach(c=>{
+    const lbl=c==='all'?`הכל (${S.staples.filter(s=>s.active).length})`:`${CS[c]?.e||''} ${CS[c]?.l||c}`;
+    h+=`<div class="chip${S.catFilt===c?' on':''}" data-a="fc" data-cat="${c}">${lbl}</div>`;
+  });
+  h+=`</div>`;
+  if(filt.length===0){h+=`<div class="empty"><div class="empty-ico">📭</div><div class="empty-ttl">אין פריטים</div></div>`;return h;}
+  // Group by frequency bucket, sorted most-frequent first
+  const FREQ_SECS=[
+    {max:14, lbl:'📅 שבועי'},
+    {max:30, lbl:'🗓️ דו-שבועי'},
+    {max:42, lbl:'📆 חודשי'},
+    {max:Infinity, lbl:'🗃️ דו-חודשי'},
+  ];
+  FREQ_SECS.forEach(sec=>{
+    const items=filt.filter(s=>(s.f||7)<=sec.max&&(s.f||7)>(FREQ_SECS[FREQ_SECS.indexOf(sec)-1]?.max||0));
+    if(!items.length)return;
+    h+=`<div class="card"><div class="grp-hdr">${sec.lbl}</div><div>`;
+    items.forEach(s=>{
+      const st=stStatus(s);const d=daysSince(s.lastOrdered);
+      const outOfSeason=s.seasonCat&&!isInSeason(s.seasonCat);
+      const meta=outOfSeason
+        ?`לא בעונה · ${(CS[s.c]||CS.custom).l}`
+        :s.lastOrdered?`הוזמן לפני ${Math.round(d)} ימים · ${(CS[s.c]||CS.custom).l}`:`${(CS[s.c]||CS.custom).l}`;
+      const seasonTag=s.seasonCat
+        ?`<span style="font-size:11px;padding:1px 6px;border-radius:10px;margin-right:4px;background:${outOfSeason?'var(--div)':'var(--mint)'};color:${outOfSeason?'var(--muted)':'var(--g1)'}">🌱 ${s.seasonCat}</span>`
+        :'';
+      const ico=s.e
+        ?`<div class="cat-ico" style="width:42px;height:42px;background:${(CS[s.c]||CS.custom).bg};font-size:22px">${s.e}</div>`
+        :catIco(s.c,42);
+      h+=`<div class="item-row${!s.active?' done':''}"${outOfSeason?' style="opacity:0.55"':''}>
+        ${ico}
+        <div class="i-info"><div class="i-name">${esc(s.n)}${seasonTag}</div>
+          <div class="i-meta">${meta}</div>
+          ${!outOfSeason&&st!=='ok'&&st!=='off'&&st!=='never'?statusPill(st):''}
+        </div>
+        <div class="item-right">
+          <div class="tog${s.active?' on':''}" data-a="ta" data-sid="${s.id}"></div>
+          <button class="item-menu" data-a="es" data-sid="${s.id}">⋮</button>
+        </div></div>`;
+    });
+    h+=`</div></div>`;
+  });
+  return h;
+}
+
+
+// ══════════════════════════════════════════
+// MAIN RENDER
+// ══════════════════════════════════════════
+let _files=[];
+function render(){
+  if(S.tab==='home'||S.tab==='meals')S.tab='shop';
+  updateAlert();
+  const m=document.getElementById('main');
+  if(S.tab==='shop')   m.innerHTML=renderShop();
+  if(S.tab==='staples')m.innerHTML=renderStaples();
+}
+function updateAlert(){
+  const b=document.getElementById('alert-bar'),m=document.getElementById('main');
+  const c=stCounts();
+  if(c.urg>0){b.style.display='block';b.textContent=`🔴 ${c.urg} פריטים דחופים לקנייה!`;m.classList.add('has-alert');}
+  else{b.style.display='none';m.classList.remove('has-alert');}
+}
+function setTab(t){
+  S.tab=t;document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  render();window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════
+function openModal(title,body){
+  const ov=document.getElementById('overlay');
+  ov.style.display='flex';
+  ov.innerHTML=`<div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-hdr"><div class="sheet-ttl">${title}</div>
+      <button class="sheet-close" id="mc">×</button></div>
+    <div class="sheet-body">${body}</div></div>`;
+  ov.querySelector('#mc').onclick=closeModal;
+  ov.addEventListener('click',e=>{if(e.target===ov)closeModal();});
+}
+function closeModal(){const ov=document.getElementById('overlay');ov.style.display='none';ov.innerHTML='';}
+
+function catOpts(sel='custom'){return Object.entries(CS).map(([k,v])=>`<option value="${k}"${k===sel?' selected':''}>${v.e} ${v.l}</option>`).join('')}
+function freqOpts(sel=7){
+  // If sel doesn't match a FREQS value exactly, snap to nearest bucket
+  const snap=FREQS.find(o=>o.v===sel)?sel:freqBucket(sel||7);
+  return FREQS.map(o=>`<option value="${o.v}"${o.v===snap?' selected':''}>${o.l}</option>`).join('');
+}
+
+// Add item to weekly list
+function openAddItem(){
+  openModal('➕ הוסף לרשימה',`
+    <div class="fg"><label class="fl">שם פריט</label>
+      <input class="fi" id="an" placeholder="לדוגמה: חלב, לחם..." autocomplete="off"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">כמות</label><input class="fi" id="aq" value="1"></div>
+      <div class="fg"><label class="fl">יחידה</label><input class="fi" id="au" value="יח׳"></div>
+    </div>
+    <div class="fg"><label class="fl">קטגוריה</label><select class="fsel" id="ac">${catOpts()}</select></div>
+    <button class="btn pri full" id="cad">הוסף ✓</button>`);
+  document.getElementById('an').focus();
+  document.getElementById('cad').onclick=()=>{
+    const n=document.getElementById('an').value.trim();
+    if(!n){toast('נא להזין שם','dan');return;}
+    const c=document.getElementById('ac').value;
+    addManualW(n,CS[c]?.e,c,document.getElementById('aq').value,document.getElementById('au').value,true);
+    closeModal();setTab('shop');toast(`${n} נוסף לרשימה (חד-פעמי) ✓`,'pri');
+  };
+  document.getElementById('an').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('cad').click();});
+}
+
+// Import modal (upload + manual text)
+function openImport(){
+  openModal('📥 ייבוא פריטים',`
+    <div class="import-tabs">
+      <div class="import-tab on" id="itab-upload" onclick="switchITab('upload')">📸 תמונה / קבלה</div>
+      <div class="import-tab" id="itab-text" onclick="switchITab('text')">✍️ הזנה ידנית</div>
+    </div>
+    <div id="ipanel-upload">
+      <div class="upload-area" id="uarea">
+        <input type="file" id="ufiles" accept="image/*,.pdf,application/pdf,.json,application/json" multiple>
+        <div style="font-size:44px;margin-bottom:10px">📱</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:5px">לחץ לבחירת קבצים</div>
+        <div style="font-size:13px;color:var(--muted)">תמונות או PDF — Wolt, קבלות, רשימות</div>
+      </div>
+      <div id="fprev" class="fchips"></div>
+      <button class="btn pri full" id="btn-analyze" style="display:none;margin-top:12px" data-a="ra">✨ נתח עם AI</button>
+    </div>
+    <div id="ipanel-text" style="display:none">
+      <div class="fg"><label class="fl">הזן רשימת פריטים (פריט אחד בשורה)</label>
+        <textarea class="fta" id="manual-txt" placeholder="חלב&#10;לחם&#10;ביצים&#10;..."></textarea></div>
+      <div class="fg"><label class="fl">קטגוריה ברירת מחדל</label>
+        <select class="fsel" id="txt-cat">${catOpts('custom')}</select></div>
+      <button class="btn pri full" id="btn-txt-add">הוסף לרשימה ✓</button>
+    </div>`);
+
+  // File input
+  const fi=document.getElementById('ufiles');const ua=document.getElementById('uarea');
+  if(fi){
+    fi.addEventListener('change',e=>{_files=Array.from(e.target.files);updFPrev();});
+    ua.addEventListener('dragover',e=>{e.preventDefault();ua.classList.add('drag');});
+    ua.addEventListener('dragleave',()=>ua.classList.remove('drag'));
+    ua.addEventListener('drop',e=>{e.preventDefault();ua.classList.remove('drag');_files=Array.from(e.dataTransfer.files);updFPrev();});
+  }
+
+  // Text add
+  const btnTxt=document.getElementById('btn-txt-add');
+  if(btnTxt)btnTxt.onclick=()=>{
+    const txt=document.getElementById('manual-txt')?.value||'';
+    const c=document.getElementById('txt-cat')?.value||'custom';
+    const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(!lines.length){toast('יש להזין לפחות פריט אחד','dan');return;}
+    lines.forEach(line=>addManualW(line,CS[c]?.e,c,'1','יח׳'));
+    closeModal();setTab('shop');toast(`${lines.length} פריטים נוספו ✓`,'pri');
+  };
+
+  if(_files.length)updFPrev();
+}
+
+function switchITab(t){
+  document.getElementById('itab-upload').classList.toggle('on',t==='upload');
+  document.getElementById('itab-text').classList.toggle('on',t==='text');
+  document.getElementById('ipanel-upload').style.display=t==='upload'?'':'none';
+  document.getElementById('ipanel-text').style.display=t==='text'?'':'none';
+}
+
+function updFPrev(){
+  const fp=document.getElementById('fprev');const ba=document.getElementById('btn-analyze');
+  if(!fp)return;
+  fp.innerHTML=_files.map((f,i)=>`<span class="fchip">📄 ${esc(f.name.length>18?f.name.slice(0,16)+'...':f.name)}<span class="fchip-x" data-rm="${i}">×</span></span>`).join('');
+  if(ba)ba.style.display=_files.length>0?'':'none';
+  fp.querySelectorAll('[data-rm]').forEach(x=>x.addEventListener('click',e=>{e.stopPropagation();_files.splice(parseInt(x.dataset.rm),1);updFPrev();}));
+}
+
+// Edit staple modal
+function openEditStaple(sid){
+  const s=S.staples.find(x=>x.id===sid);if(!s)return;
+  const ld=s.lastOrdered?new Date(s.lastOrdered).toISOString().split('T')[0]:'';
+  const curSeason=s.seasonCat||'כל השנה';
+  const seasonOpts=['כל השנה','קיץ','סתיו','חורף','אביב'].map(v=>`<option value="${v}"${v===curSeason?' selected':''}>${v}</option>`).join('');
+  openModal(`✏️ עריכה: ${esc(s.n)}`,`
+    <div class="fg"><label class="fl">שם</label><input class="fi" id="en" value="${esc(s.n)}"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">כמות</label><input class="fi" id="eq" value="${esc(s.q)}"></div>
+      <div class="fg"><label class="fl">יחידה</label><input class="fi" id="eu" value="${esc(s.u)}"></div>
+    </div>
+    <div class="fg"><label class="fl">תדירות</label><select class="fsel" id="ef">${freqOpts(s.f)}</select></div>
+    <div class="fg"><label class="fl">עונה</label><select class="fsel" id="eseas">${seasonOpts}</select></div>
+    <div class="fg"><label class="fl">הוזמן לאחרונה</label>
+      <input type="date" class="fi" id="eld" value="${ld}" max="${new Date().toISOString().split('T')[0]}"></div>
+    <div style="display:flex;gap:9px;margin-top:6px">
+      <button class="btn pri" style="flex:1" id="esv">שמור ✓</button>
+      <button class="btn dan" id="edl">🗑️</button>
+    </div>`);
+  document.getElementById('esv').onclick=()=>{
+    const n=document.getElementById('en').value.trim();if(!n){toast('שם הוא שדה חובה','dan');return;}
+    const ldv=document.getElementById('eld').value;
+    const seas=document.getElementById('eseas').value;
+    updStaple(sid,{n,q:document.getElementById('eq').value,u:document.getElementById('eu').value,
+      f:parseInt(document.getElementById('ef').value),
+      lastOrdered:ldv?new Date(ldv).toISOString():s.lastOrdered,
+      seasonCat:seas==='כל השנה'?null:seas});
+    closeModal();render();toast('עודכן ✓','pri');
+  };
+  document.getElementById('edl').onclick=()=>{
+    if(confirm(`למחוק "${s.n}"?`)){delStaple(sid);closeModal();render();toast(`${s.n} נמחק`,'wrn');}
+  };
+}
+
+// Add pantry item modal (unified: name, category, qty, unit, frequency)
+function openAddPantryItem(){
+  openModal('🏡 הוסף למאגר',`
+    <div class="fg"><label class="fl">שם פריט</label>
+      <input class="fi" id="ap-name" placeholder="e.g. חלב" dir="rtl" autocomplete="off"></div>
+    <div class="fg"><label class="fl">קטגוריה</label>
+      <select class="fsel" id="ap-cat">${catOpts('custom')}</select></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">כמות</label><input class="fi" id="ap-qty" value="1"></div>
+      <div class="fg"><label class="fl">יחידה</label><input class="fi" id="ap-unit" value="יח׳" dir="rtl"></div>
+    </div>
+    <div class="fg"><label class="fl">תדירות</label><select class="fsel" id="ap-freq">${freqOpts(7)}</select></div>
+    <button class="btn pri full" id="ap-save">הוסף למאגר ✓</button>`);
+  setTimeout(()=>document.getElementById('ap-name')?.focus(),100);
+  document.getElementById('ap-save').onclick=()=>{
+    const name=document.getElementById('ap-name')?.value.trim();
+    if(!name){toast('נא להזין שם','dan');return;}
+    if(S.staples.find(s=>normN(s.n)===normN(name))){toast(`${name} כבר קיים במאגר`,'dan');return;}
+    const cat=document.getElementById('ap-cat')?.value||'custom';
+    const freq=parseInt(document.getElementById('ap-freq')?.value||'7');
+    addStaple(name,cat,CS[cat]?.e,document.getElementById('ap-qty')?.value||'1',document.getElementById('ap-unit')?.value.trim()||'יח׳',freq,true);
+    closeModal();render();toast(`${esc(name)} נוסף למאגר ✓`,'pri');
+  };
+}
+
+
+// ══════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════
+function openSettings(){
+  const p=document.getElementById('spanel');p.style.display='block';
+  p.innerHTML=`<div class="sp-hdr">
+    <button class="hdr-btn" id="sc">←</button>
+    <div style="font-size:17px;font-weight:800">⚙️ הגדרות</div></div>
+  <div class="sp-body">
+    <div class="sp-sec"><div class="sp-sec-ttl">מפתח API של Anthropic</div>
+      ${S.settings.apiKey
+        ?`<div style="display:flex;align-items:center;gap:12px;background:var(--mint);border:1.5px solid var(--g3);border-radius:var(--r2);padding:14px;margin-bottom:10px">
+            <span style="font-size:26px">✅</span>
+            <div><div style="font-size:14px;font-weight:700;color:var(--g1)">מפתח מוגדר</div>
+              <div style="font-size:12px;color:var(--muted)">מסתיים ב-···${esc(S.settings.apiKey.slice(-4))}</div></div>
+          </div>`
+        :`<div style="display:flex;align-items:center;gap:12px;background:var(--reds);border:1.5px solid var(--red);border-radius:var(--r2);padding:14px;margin-bottom:10px">
+            <span style="font-size:26px">🔑</span>
+            <div><div style="font-size:14px;font-weight:700;color:var(--red)">אין מפתח</div>
+              <div style="font-size:12px;color:var(--muted)">נדרש לניתוח קבצים עם AI</div></div>
+          </div>`}
+      <div class="sp-card">
+        <div class="sp-row" style="flex-direction:column;align-items:stretch;gap:8px">
+          <input type="password" class="fi" id="sak" placeholder="sk-ant-api03-..." value="${esc(S.settings.apiKey||'')}">
+          <div style="font-size:12px;color:var(--muted)">קבל מפתח חינמי באתר: <strong>console.anthropic.com</strong></div>
+        </div>
+        <div class="sp-row"><div class="sp-lbl">מודל AI</div>
+          <select class="fsel" id="smod" style="width:auto;padding:6px 10px;font-size:16px">
+            <option value="claude-opus-4-6" ${S.settings.model==='claude-opus-4-6'?'selected':''}>Opus 4.6 (מומלץ)</option>
+            <option value="claude-sonnet-4-6" ${S.settings.model==='claude-sonnet-4-6'?'selected':''}>Sonnet 4.6 (מהיר)</option>
+          </select></div>
+      </div>
+      <button class="btn pri full" id="ssave" style="margin-top:8px">שמור ✓</button></div>
+    <div class="sp-sec"><div class="sp-sec-ttl">נתונים</div>
+      <div class="sp-card">
+        <div class="sp-row"><span class="sp-lbl">פריטים במאגר</span><span style="color:var(--muted)">${S.staples.length}</span></div>
+        <div class="sp-row"><span class="sp-lbl">רשימת קניות</span><span style="color:var(--muted)">${S.weekly.length}</span></div>
+      </div></div>
+    <div class="sp-sec"><div class="sp-sec-ttl">הגדרה ראשונית</div>
+      <div class="sp-card">
+        <div class="sp-row" style="cursor:pointer" id="sr0">
+          <div><span class="sp-lbl">🚀 אשף הגדרה</span>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">ייבוא Wolt ואישור מאגר</div></div>
+          <span>→</span>
+        </div>
+      </div></div>
+    <div class="sp-sec"><div class="sp-sec-ttl">פעולות</div>
+      <div class="sp-card">
+        <div class="sp-row" style="cursor:pointer" id="sr1"><span class="sp-lbl">🔄 אפס תאריכי הזמנה</span><span>→</span></div>
+        <div class="sp-row" style="cursor:pointer" id="sr2"><span class="sp-lbl" style="color:var(--ora)">🗑️ נקה רשימת קניות</span><span>→</span></div>
+        <div class="sp-row" style="cursor:pointer" id="sr3"><span class="sp-lbl" style="color:var(--red)">⚠️ איפוס הכל</span><span>→</span></div>
+      </div></div>
+    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡</div>
+  </div>`;
+  p.querySelector('#sc').onclick=()=>{p.style.display='none';};
+  p.querySelector('#ssave').onclick=()=>{
+    S.settings.apiKey=p.querySelector('#sak').value.trim();
+    S.settings.model=p.querySelector('#smod').value;
+    save();updateKeyBadge();toast('נשמר ✓','pri');p.style.display='none';
+  };
+  p.querySelector('#sr0').onclick=()=>{S.setupDone=false;S.wizardStep=0;save();p.style.display='none';openWizard();};
+  p.querySelector('#sr1').onclick=()=>{if(confirm('לאפס תאריכים?')){S.staples.forEach(s=>s.lastOrdered=null);save();render();toast('אופס ✓','wrn');p.style.display='none';}};
+  p.querySelector('#sr2').onclick=()=>{if(confirm('לנקות את הרשימה?')){S.weekly=[];save();render();toast('נוקתה ✓','wrn');p.style.display='none';}};
+  p.querySelector('#sr3').onclick=()=>{if(confirm('לאפס הכל? כל הנתונים יימחקו!')){localStorage.removeItem('kb3');location.reload();}};
+}
+
+// ══════════════════════════════════════════
+// API KEY PROMPT
+// ══════════════════════════════════════════
+function openApiKeyPrompt(onSave){
+  closeModal();
+  openModal('🔑 מפתח API של Anthropic',`
+    <div style="background:var(--mint);border:1.5px solid var(--g3);border-radius:var(--r2);padding:16px;margin-bottom:18px">
+      <div style="font-size:15px;font-weight:700;color:var(--g1);margin-bottom:6px">נדרש פעם אחת בלבד</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:1.65">
+        המפתח מאפשר ניתוח קבצים עם AI ומאוחסן <strong>בדפדפן בלבד</strong> — לא נשלח לשום מקום.
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">הזן את מפתח ה-API שלך</label>
+      <input type="password" class="fi" id="apk-inp" placeholder="sk-ant-api03-..." autocomplete="off" style="font-size:16px;letter-spacing:.5px">
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      אין מפתח? קבל אחד בחינם:<br>
+      <span style="color:var(--g1);font-weight:700">console.anthropic.com</span>
+    </div>
+    <button class="btn pri full" id="apk-save">שמור והמשך ✓</button>
+    <button class="btn ghost full" style="margin-top:6px" onclick="closeModal()">ביטול</button>`);
+  const inp=document.getElementById('apk-inp');
+  if(inp){if(S.settings.apiKey)inp.value=S.settings.apiKey;inp.focus();}
+  document.getElementById('apk-save').onclick=()=>{
+    const v=document.getElementById('apk-inp')?.value.trim();
+    if(!v){toast('נא להזין מפתח','dan');return;}
+    S.settings.apiKey=v;save();updateKeyBadge();
+    closeModal();toast('מפתח נשמר ✓','pri');
+    if(onSave)onSave();
+  };
+}
+function requireApiKey(cb){
+  if(S.settings.apiKey){cb();return;}
+  openApiKeyPrompt(cb);
+}
+function updateKeyBadge(){
+  const btn=document.getElementById('btn-settings');
+  if(!btn)return;
+  const badge=btn.querySelector('.key-badge')||document.createElement('span');
+  badge.className='key-badge';
+  badge.style.cssText='position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--red);display:block';
+  if(!S.settings.apiKey){if(!btn.querySelector('.key-badge'))btn.appendChild(badge);}
+  else{badge.remove();}
+}
+
+// ══════════════════════════════════════════
+// WIZARD (PHASE 1 SETUP)
+// ══════════════════════════════════════════
+let _wizFiles=[];
+let _preservedDoneNames=null; // done-state snapshot preserved across applyRecs → wizDone
+
+function openWizard(){
+  const wz=document.getElementById('wizard');
+  if(wz){wz.style.display='flex';}
+  renderWizardStep();
+}
+function closeWizard(){
+  const wz=document.getElementById('wizard');
+  if(wz)wz.style.display='none';
+}
+function renderWizardStep(){
+  const wz=document.getElementById('wizard-inner');
+  if(!wz)return;
+  const step=S.wizardStep;
+  const STEPS=4;
+  const stepIdx={0:0,1:1,2:2,4:3};
+  const dots=Array(STEPS).fill(0).map((_,i)=>`<div class="wiz-dot${i===(stepIdx[step]??step)?' on':''}"></div>`).join('');
+  let inner='';
+  if(step===0){
+    inner=`<div class="wiz-ico">👋</div>
+      <div class="wiz-ttl">ברוכים הבאים לקניות בית!</div>
+      <div class="wiz-sub">האפליקציה עוזרת לנהל קניות משפחתיות בחכמה.<br>בואו נגדיר יחד תוך 3 דקות.</div>
+      <button class="btn pri full" onclick="advWiz(1)">בואו נתחיל! →</button>
+      <button class="btn ghost full" style="margin-top:8px" onclick="wizSkip()">דלג על ההגדרה</button>`;
+  } else if(step===1){
+    inner=`<div class="wiz-ico">📦</div>
+      <div class="wiz-ttl">ייבוא היסטוריית Wolt</div>
+      <div class="wiz-sub">העלה צילומי מסך של הזמנות Wolt אחרונות — AI ינתח מה אתם קונים ויציע מאגר מותאם אישית.</div>
+      <div class="upload-area" id="wiz-uarea">
+        <input type="file" id="wiz-files" accept="image/*,.pdf,application/pdf,.json,application/json" multiple>
+        <div style="font-size:40px;margin-bottom:8px">📱</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">לחץ לבחירת קבצים</div>
+        <div style="font-size:13px;color:var(--muted)">תמונות או PDF — Wolt, קבלות, רשימות</div>
+      </div>
+      <div id="wiz-fprev" class="fchips" style="margin-top:8px"></div>
+      <div id="wiz-err" style="display:none;margin-top:12px;padding:12px 14px;background:var(--reds);color:var(--red);border-radius:var(--r2);font-size:13px;font-weight:600;line-height:1.5"></div>
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <button class="btn out" style="flex:1" onclick="advWiz(2)">דלג →</button>
+        <button class="btn pri" style="flex:1;opacity:.5" id="wiz-analyze" disabled onclick="runWizAnalyze()">✨ נתח</button>
+      </div>`;
+  } else if(step===2){
+    const recs=S.analysisRecs;
+    if(!recs||!recs.items?.length){
+      inner=`<div class="wiz-ico">🏡</div>
+        <div class="wiz-ttl">המאגר שלך מוכן</div>
+        <div class="wiz-sub">הגדרנו ${S.staples.length} פריטים לשמור בבית תמיד.</div>
+        <button class="btn pri full" onclick="advWiz(4)">הבא →</button>`;
+    } else {
+      // Client-side threshold filter: ≥3 purchases, avg interval ≤90 days, food/cleaning only
+      const KNOWN_CATS=new Set(['baby','dairy','bread','produce','meat','frozen','snacks','drinks','pantry','cleaning','custom']);
+      const SVCPAT=/wolt\+|מנוי|subscription|סיגריות/i;
+      const filtered=recs.items.filter(it=>{
+        const count=it.purchase_count||0;
+        const avg=it.avg_order_interval_days||999;
+        if(count<3||avg>90){console.log('[filter-out]',it.name,'count:'+count,'avg:'+avg,'reason: threshold');return false;}
+        if(it.cat==='hygiene'||!KNOWN_CATS.has(it.cat)){console.log('[filter-out]',it.name,'cat:'+it.cat,'reason: category');return false;}
+        if(SVCPAT.test(it.name||'')){console.log('[filter-out]',it.name,'reason: blacklist');return false;}
+        console.log('[filter-pass]',it.name,'count:'+count,'avg:'+avg,'→ bucket:'+freqBucket(avg));
+        return true;
+      });
+      console.log('[filter] kept',filtered.length,'of',recs.items.length,'items');
+      const itemsH=filtered.map(it=>{
+        const cat=it.cat||'custom';
+        const avg=Math.round(it.avg_order_interval_days||7);
+        const bucket=freqBucket(avg);
+        const ico=it.emoji
+          ?`<div class="cat-ico" style="width:38px;height:38px;background:${(CS[cat]||CS.custom).bg};font-size:20px">${it.emoji}</div>`
+          :catIco(cat,38);
+        const itemFreqOpts=FREQS.map(f=>`<option value="${f.v}"${f.v===bucket?' selected':''}>${esc(f.l)}</option>`).join('');
+        const lastMs=it.last_purchase?new Date(it.last_purchase).getTime():null;
+        const daysSinceLast=lastMs?Math.round((Date.now()-lastMs)/86400000):null;
+        const mightBeSeasonal=daysSinceLast!==null&&daysSinceLast>avg*4;
+        const seasonOpts=['כל השנה','קיץ','סתיו','חורף','אביב'].map(v=>`<option value="${v}">${v}</option>`).join('');
+        const seasonH=mightBeSeasonal
+          ?`<div style="margin-top:4px;font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:4px">🌱<select class="season-sel" onclick="event.stopPropagation()" style="font-size:16px;padding:2px 4px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt)">${seasonOpts}</select></div>`
+          :`<select class="season-sel" style="display:none"><option value="כל השנה">כל השנה</option></select>`;
+        return `<div class="post-item sel" data-rec-name="${esc(it.name)}" onclick="this.classList.toggle('sel');this.querySelector('.chk').classList.toggle('on')">
+          ${ico}
+          <div class="i-info">
+            <div class="i-name">${esc(it.name)}</div>
+            <div class="i-meta">${it.purchase_count} פעמים · ממוצע כל ${avg} ימים · ${it.typical_qty||1} ${it.unit||'יח׳'}</div>
+            <select class="freq-sel" onclick="event.stopPropagation()" style="margin-top:5px;font-size:16px;padding:3px 6px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt)">${itemFreqOpts}</select>
+            ${seasonH}
+          </div>
+          <div class="chk on" style="pointer-events:none">✓</div>
+        </div>`;
+      }).join('');
+      inner=`<div class="wiz-ttl" style="text-align:right">ניתוח הזמנות — ${filtered.length} פריטים</div>
+        <div class="wiz-sub" style="text-align:right;margin-bottom:12px">בדוק תדירות לכל פריט ואשר:</div>
+        <div class="card" style="margin-bottom:14px">${itemsH||'<div style="padding:16px;color:var(--muted);text-align:center">אין פריטים שעמדו במינימום (3 רכישות)</div>'}</div>
+        ${recs.summary?`<div style="font-size:13px;color:var(--txt2);background:var(--mint);border-radius:var(--r2);padding:12px;margin-bottom:14px;line-height:1.5">💡 ${esc(recs.summary)}</div>`:''}
+        <button class="btn pri full" onclick="applyRecs()">הוסף פריטים נבחרים ✓</button>
+        <button class="btn ghost full" style="margin-top:6px" onclick="advWiz(4)">דלג</button>
+        <button class="btn ghost full" style="margin-top:6px;font-size:13px" onclick="advWiz(1)">← נתח מחדש</button>`;
+    }
+  } else if(step===4){
+    inner=`<div class="wiz-ico">🎉</div>
+      <div class="wiz-ttl">הכל מוכן!</div>
+      <div class="wiz-sub">האפליקציה מוכנה למשפחה.<br>בואו ניצור את רשימת הקניות הראשונה!</div>
+      <button class="btn pri full" onclick="wizDone()">בואו נתחיל 🛒</button>`;
+  }
+  wz.innerHTML=`<div class="wiz-prog">${dots}</div><div class="wiz-step">${inner}</div>`;
+  if(step===1){
+    const wfi=document.getElementById('wiz-files');
+    if(wfi)wfi.addEventListener('change',e=>{_wizFiles=Array.from(e.target.files);updWizFPrev();});
+    updWizFPrev();
+  }
+}
+function updWizFPrev(){
+  const fp=document.getElementById('wiz-fprev');const btn=document.getElementById('wiz-analyze');
+  if(!fp)return;
+  fp.innerHTML=_wizFiles.map((f,i)=>`<span class="fchip">📄 ${esc(f.name.length>18?f.name.slice(0,16)+'...':f.name)}<span class="fchip-x" data-rm="${i}">×</span></span>`).join('');
+  if(btn){btn.disabled=_wizFiles.length===0;btn.style.opacity=_wizFiles.length>0?'1':'0.5';}
+  fp.querySelectorAll('[data-rm]').forEach(x=>x.addEventListener('click',e=>{e.stopPropagation();_wizFiles.splice(parseInt(x.dataset.rm),1);updWizFPrev();}));
+}
+function advWiz(step){S.wizardStep=step;save();renderWizardStep();}
+function wizSkip(){S.setupDone=true;save();closeWizard();render();}
+function wizDone(){
+  S.setupDone=true;S.wizardStep=0;save();
+  closeWizard();genWeekly();
+  // Restore done-state for items that were checked off before re-analysis
+  if(_preservedDoneNames){
+    S.weekly.forEach(w=>{
+      if(!w.done&&_preservedDoneNames.has(normN(w.n))){
+        w.done=true;
+        if(w.sid){const s=S.staples.find(x=>x.id===w.sid);if(s)s.lastOrdered=new Date().toISOString();}
+      }
+    });
+    _preservedDoneNames=null;save();
+  }
+  render();setTab('shop');
+}
+function applyRecs(){
+  const recs=S.analysisRecs;if(!recs)return;
+  const wz=document.getElementById('wizard-inner');
+  const selEls=wz?Array.from(wz.querySelectorAll('.post-item.sel')):[];
+  // Snapshot done-state before wiping so wizDone can restore it after genWeekly re-adds items
+  _preservedDoneNames=new Set(S.weekly.filter(w=>w.done).map(w=>normN(w.n)));
+  // Wipe all non-manual staples (analysis items, old or new, flagged or not)
+  S.staples=S.staples.filter(s=>s.manual===true);
+  S.weekly=S.weekly.filter(w=>w.manual||S.staples.find(s=>s.id===w.sid));
+  let added=0;
+  selEls.forEach(el=>{
+    const name=el.dataset.recName;
+    const it=recs.items.find(x=>x.name===name);
+    if(!it)return;
+    const selEl=el.querySelector('.freq-sel');
+    const bucket=selEl?parseInt(selEl.value):freqBucket(it.avg_order_interval_days||7);
+    const seasonEl=el.querySelector('.season-sel');
+    const seasonCat=seasonEl?seasonEl.value:'כל השנה';
+    if(!S.staples.find(s=>normN(s.n)===normN(name))){
+      addStaple(name,it.cat||'custom',it.emoji||CS[it.cat||'custom']?.e,String(it.typical_qty||1),it.unit||'יח׳',bucket,false,seasonCat);
+      added++;
+    }
+  });
+  if(added)toast(`${added} פריטים נוספו למאגר ✓`,'pri');
+  advWiz(4);
+}
+function runWizAnalyze(){analyzeWoltHistory(_wizFiles);}
+
+// ══════════════════════════════════════════
+// POST-SHOPPING (PHASE 2)
+// ══════════════════════════════════════════
+// items: [{sid:string|null, name:string, qty:number}]
+function recordPurchase(items,source){
+  if(!S.purchaseLog)S.purchaseLog=[];
+  S.purchaseLog.unshift({id:'p'+Date.now(),date:new Date().toISOString(),items,source});
+  if(S.purchaseLog.length>50)S.purchaseLog=S.purchaseLog.slice(0,50);
+  save();
+}
+function markItemsReceived(names){
+  let count=0;
+  names.forEach(name=>{
+    const nn=normN(name);
+    const st=S.staples.find(s=>normN(s.n)===nn);
+    if(st){st.lastOrdered=new Date().toISOString();count++;}
+    const w=S.weekly.find(x=>normN(x.n)===nn&&!x.done);
+    if(w){w.done=true;if(w.sid){const s=S.staples.find(x=>x.id===w.sid);if(s)s.lastOrdered=new Date().toISOString();}}
+  });
+  return count;
+}
+function switchPSTab(t){
+  document.getElementById('pstab-manual')?.classList.toggle('on',t==='manual');
+  document.getElementById('pstab-receipt')?.classList.toggle('on',t==='receipt');
+  const pm=document.getElementById('pspanel-manual');const pr=document.getElementById('pspanel-receipt');
+  if(pm)pm.style.display=t==='manual'?'':'none';
+  if(pr)pr.style.display=t==='receipt'?'':'none';
+}
+function openPostShopping(){
+  const pend=S.weekly.filter(w=>!w.done);
+  openModal('🛍️ חזרתי מהקנייה',`
+    <div class="import-tabs">
+      <div class="import-tab on" id="pstab-manual" onclick="switchPSTab('manual')">✔️ סמן מה קנית</div>
+      <div class="import-tab" id="pstab-receipt" onclick="switchPSTab('receipt')">📸 העלה קבלה</div>
+    </div>
+    <div id="pspanel-manual">
+      ${pend.length===0?`<div class="empty"><div class="empty-ico">🎉</div>
+        <div class="empty-ttl">הרשימה ריקה</div>
+        <div class="empty-sub">אין פריטים ממתינים ברשימה.</div></div>`:
+        `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">סמן את הפריטים שקנית:</div>
+        <div class="card" id="ps-items">
+          ${pend.map(w=>`<div class="post-item" data-wid="${w.id}" onclick="this.classList.toggle('sel');this.querySelector('.chk').classList.toggle('on')">
+            ${catIco(w.c,38)}
+            <div class="i-info"><div class="i-name">${esc(w.n)}</div>
+              <div class="i-meta">${esc(w.q)} ${esc(w.u)}</div></div>
+            <div class="chk" style="pointer-events:none">✓</div></div>`).join('')}
+        </div>
+        <div style="display:flex;gap:9px;margin-top:14px">
+          <button class="btn out sm" onclick="document.querySelectorAll('#ps-items .post-item').forEach(el=>{el.classList.add('sel');el.querySelector('.chk').classList.add('on')})">בחר הכל</button>
+          <button class="btn pri" style="flex:1" id="ps-confirm">עדכן מלאי ✓</button>
+        </div>`}
+    </div>
+    <div id="pspanel-receipt" style="display:none">
+      <div class="upload-area" id="ps-uarea">
+        <input type="file" id="ps-files" accept="image/*,.pdf,application/pdf,.json,application/json" multiple>
+        <div style="font-size:40px;margin-bottom:8px">🧾</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">העלה קבלה — תמונה או PDF</div>
+        <div style="font-size:13px;color:var(--muted)">AI יזהה מה קנית ויעדכן את המלאי</div>
+      </div>
+      <div id="ps-fprev" class="fchips" style="margin-top:8px"></div>
+      <button class="btn pri full" id="ps-analyze" style="display:none;margin-top:12px">✨ נתח קבלה</button>
+    </div>`);
+  // Manual confirm
+  const psconf=document.getElementById('ps-confirm');
+  if(psconf)psconf.onclick=()=>{
+    const sel=Array.from(document.querySelectorAll('#ps-items .post-item.sel'));
+    const wids=sel.map(el=>el.dataset.wid);
+    const tripItems=[];
+    wids.forEach(wid=>{
+      const w=S.weekly.find(x=>x.id===wid);if(!w)return;
+      w.done=true;
+      tripItems.push({sid:w.sid||null,name:w.n,qty:Math.max(1,parseFloat(w.q)||1)});
+      if(w.sid){const st=S.staples.find(s=>s.id===w.sid);if(st)st.lastOrdered=new Date().toISOString();}
+    });
+    recordPurchase(tripItems,'manual');
+    if(!S.pendingSuggestions)S.pendingSuggestions=[];
+    checkNewItems(tripItems);
+    checkRemovals();
+    S.weekly=S.weekly.filter(w=>!w.one_time);
+    save();closeModal();render();
+    toast(`${wids.length} פריטים עודכנו ✓`,'pri');
+    setTimeout(showNextSuggestion,400);
+  };
+  // Receipt file input
+  let _psFiles=[];
+  const updPSPrev=()=>{
+    const fp=document.getElementById('ps-fprev');const ba=document.getElementById('ps-analyze');
+    if(!fp)return;
+    fp.innerHTML=_psFiles.map((f,i)=>`<span class="fchip">📄 ${esc(f.name.length>18?f.name.slice(0,16)+'...':f.name)}<span class="fchip-x" data-rm="${i}">×</span></span>`).join('');
+    if(ba)ba.style.display=_psFiles.length>0?'':'none';
+    fp.querySelectorAll('[data-rm]').forEach(x=>x.addEventListener('click',e=>{e.stopPropagation();_psFiles.splice(parseInt(x.dataset.rm),1);updPSPrev();}));
+  };
+  const psfi=document.getElementById('ps-files');
+  if(psfi)psfi.addEventListener('change',e=>{_psFiles=Array.from(e.target.files);updPSPrev();});
+  const psanalyze=document.getElementById('ps-analyze');
+  if(psanalyze)psanalyze.onclick=()=>analyzeReceipt(_psFiles);
+}
+
+// ══════════════════════════════════════════
+// CLAUDE API
+// ══════════════════════════════════════════
+// Robust JSON extractor: counts braces so it handles text before/after the JSON object
+function extractJSON(txt){
+  // Strip markdown code fences if present
+  const fenced=txt.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if(fenced)txt=fenced[1];
+  const start=txt.indexOf('{');
+  if(start===-1)return null;
+  let depth=0;
+  for(let i=start;i<txt.length;i++){
+    if(txt[i]==='{')depth++;
+    else if(txt[i]==='}'){depth--;if(depth===0)return txt.slice(start,i+1);}
+  }
+  return null;
+}
+async function analyzeFiles(files){
+  if(!S.settings.apiKey){requireApiKey(()=>analyzeFiles(files));return;}
+  const overlay=document.getElementById('overlay');
+  const prevContent=overlay.innerHTML;
+  overlay.style.display='flex';
+  overlay.innerHTML=`<div class="sheet" style="text-align:center;padding:48px 20px">
+    <div class="spinner"></div>
+    <p style="margin-top:16px;color:var(--muted);font-size:14px">מנתח קבצים...<br>זה עשוי לקחת כמה שניות ☕</p></div>`;
+  try{
+    const imgs=await Promise.all(Array.from(files).map(f=>new Promise((res,rej)=>{
+      const r=new FileReader();
+      const isJson=f.type==='application/json'||f.name.endsWith('.json');
+      r.onload=e=>{
+        if(isJson){res({type:'text',text:e.target.result});return;}
+        const d=e.target.result.split(',')[1];
+        res(f.type==='application/pdf'
+          ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:d}}
+          :{type:'image',source:{type:'base64',media_type:f.type.startsWith('image/')?f.type:'image/jpeg',data:d}});
+      };
+      r.onerror=rej;if(isJson)r.readAsText(f);else r.readAsDataURL(f);
+    })));
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
+        'content-type':'application/json','anthropic-dangerous-direct-browser-access':'true',
+        ...(imgs.some(i=>i.type==='document')?{'anthropic-beta':'pdfs-2024-09-25'}:{})},
+      body:JSON.stringify({model:S.settings.model||'claude-opus-4-6',max_tokens:16000,
+        messages:[{role:'user',content:[...imgs,{type:'text',text:`נתח את הקבצים האלה (צילומי מסך של הזמנות Wolt, קבלות סופרמרקט, או רשימות קניות).
+זהה כל פריט ואת הקטגוריה שלו.
+קטגוריות: baby, dairy, bread, produce, pantry, hygiene, cleaning, snacks, frozen, meat, custom
+החזר JSON תקני בלבד:
+{"items":[{"name":"שם פריט","category":"קטגוריה","qty":"1","unit":"יח׳","emoji":"🥛"}],"insights":["תובנה 1"]}`}]}]})});
+    if(resp.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`Error ${resp.status}`);}
+    const data=await resp.json();
+    const txt=data.content[0]?.text||'';
+    const jsonStr=extractJSON(txt);
+    if(!jsonStr)throw new Error('No JSON found in response. Try again.');
+    const result=JSON.parse(jsonStr);
+    closeModal();
+    // Add items to weekly list
+    let added=0;
+    (result.items||[]).forEach(it=>{
+      if(it.name){addManualW(it.name,it.emoji||CS[it.category]?.e,it.category,it.qty||'1',it.unit||'יח׳');added++;}
+    });
+    save();render();
+    toast(`${added} פריטים נוספו מהניתוח 🎉`,'pri');
+    _files=[];
+  }catch(e){
+    closeModal();
+    if(e.message==='__auth__'){requireApiKey(()=>analyzeFiles(files));return;}
+    toast('שגיאה: '+(e.message||'בדוק את מפתח ה-API'),'dan');console.error(e);
+  }
+}
+
+// ── Parse a single Wolt JSON export into order events [{date, items:[{name,qty}]}]
+function parseWoltOrders(jsonText){
+  let data;try{data=JSON.parse(jsonText);}catch{return [];}
+  // Support multiple Wolt export shapes
+  let raw=null;
+  if(Array.isArray(data))raw=data;
+  else if(Array.isArray(data.orders))raw=data.orders;
+  else if(Array.isArray(data.order_history))raw=data.order_history;
+  else if(data.data&&Array.isArray(data.data))raw=data.data;
+  else{
+    // Last resort: find first array whose items look like orders
+    for(const v of Object.values(data)){
+      if(Array.isArray(v)&&v.length&&v[0]&&
+         (v[0].items||v[0].order_items||v[0].created_at||v[0].date)){raw=v;break;}
+    }
+  }
+  if(!raw)return [];
+  const events=[];
+  for(const order of raw){
+    const dateStr=order.created_at||order.date||order.order_date||order.placed_at||order.time;
+    if(!dateStr)continue;
+    const date=new Date(dateStr);
+    if(isNaN(date.getTime()))continue;
+    const rawItems=order.order_items||order.items||order.products||order.cart_items||order.basket||[];
+    const items=rawItems.map(i=>({
+      name:(i.name||i.product_name||i.title||i.item_name||'').trim(),
+      qty:Math.max(1,i.count>0?i.count:parseInt(i.quantity||i.qty||1)||1)
+    })).filter(i=>i.name);
+    if(items.length)events.push({date,items});
+  }
+  return events;
+}
+
+// ── Median of a numeric array
+function median(arr){
+  if(!arr.length)return 0;
+  const s=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(s.length/2);
+  return s.length%2?s[m]:(s[m-1]+s[m])/2;
+}
+
+// ── JS pre-calculates per-SKU stats for all SKUs (AI handles semantic grouping)
+function preCalcWoltStats(jsonTexts){
+  const BLPAT=/wolt\+|מנוי|subscription|סיגריות/i;
+  const allEvents=jsonTexts.flatMap(t=>parseWoltOrders(t));
+  if(!allEvents.length)throw new Error('לא ניתן לפרסר את קובץ ה-JSON. וודא שזהו ייצוא הזמנות Wolt תקין.');
+  // Build SKU map: raw name → {dateKey → total qty}
+  const skuMap={};
+  for(const ev of allEvents){
+    const dk=ev.date.toISOString().slice(0,10);
+    for(const it of ev.items){
+      if(!skuMap[it.name])skuMap[it.name]={};
+      skuMap[it.name][dk]=(skuMap[it.name][dk]||0)+it.qty;
+    }
+  }
+  // Include all SKUs (even ×1); final ≥3 threshold applied in groupSkusByNormKey after combining variants
+  const skus=[];
+  for(const [name,dq] of Object.entries(skuMap)){
+    if(BLPAT.test(name))continue;
+    const dates=Object.keys(dq).sort();
+    const purchase_count=dates.length;
+    // Fix 2: median qty — robust against one-off bulk purchases
+    const qtys=dates.map(d=>dq[d]);
+    const typical_qty=Math.max(1,Math.round(median(qtys)));
+    // Fix 1: median of intervals with outlier trimming — robust against vacation gaps
+    let avg_days=0,span_days=0;
+    if(purchase_count>1){
+      const ts=dates.map(d=>new Date(d).getTime());
+      span_days=Math.round((ts[ts.length-1]-ts[0])/86400000);
+      const intervals=[];
+      for(let i=1;i<ts.length;i++)intervals.push((ts[i]-ts[i-1])/86400000);
+      const medInt=median(intervals);
+      const clean=intervals.filter(iv=>iv<=medInt*3); // drop gaps > 3× median (vacations, stockouts)
+      avg_days=Math.round(median(clean.length?clean:intervals)*10)/10;
+    }
+    console.log('[precalc]',name,'×'+purchase_count,'avg:'+avg_days+'d','qty:'+typical_qty);
+    skus.push({name,purchase_count,span_days,avg_days,typical_qty,dates,qtys});
+  }
+  return skus;
+}
+
+// ── Analyze Wolt history (Phase 1 wizard)
+// JSON path: Pass 1 JS groups SKUs by normalized key → Pass 2 AI names/categorises only
+// PDF/image fallback: AI does full extraction (less reliable math)
+async function analyzeWoltHistory(files){
+  if(!files||!files.length){toast('נא לבחור קבצים','dan');return;}
+  if(!S.settings.apiKey){
+    closeWizard();
+    requireApiKey(()=>{openWizard();analyzeWoltHistory(files);});
+    return;
+  }
+  const btn=document.getElementById('wiz-analyze');
+  const errDiv=document.getElementById('wiz-err');
+  if(btn){btn.disabled=true;btn.textContent='מנתח...';}
+  if(errDiv)errDiv.style.display='none';
+  try{
+    // Separate JSON files from PDF/image files
+    const jsonTexts=[];const mediaImgs=[];
+    await Promise.all(Array.from(files).map(f=>new Promise((res,rej)=>{
+      const r=new FileReader();
+      const isJson=f.type==='application/json'||f.name.endsWith('.json');
+      r.onload=e=>{
+        if(isJson){jsonTexts.push(e.target.result);res();return;}
+        const d=e.target.result.split(',')[1];
+        mediaImgs.push(f.type==='application/pdf'
+          ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:d}}
+          :{type:'image',source:{type:'base64',media_type:f.type.startsWith('image/')?f.type:'image/jpeg',data:d}});
+        res();
+      };
+      r.onerror=rej;
+      if(isJson)r.readAsText(f);else r.readAsDataURL(f);
+    })));
+
+    let resp,preCalcSkus=null;
+
+    if(jsonTexts.length){
+      // ── JSON path: JS calculates all stats, AI does semantic grouping only ──
+      preCalcSkus=preCalcWoltStats(jsonTexts);
+      if(!preCalcSkus.length)throw new Error('לא נמצאו פריטים בקובץ. בדוק שהקובץ הוא ייצוא הזמנות Wolt תקין.');
+      const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=2);
+      console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥2 purchases) to AI for semantic grouping');
+      const skuList=JSON.stringify(skusForAI.map(s=>({name:s.name,purchase_count:s.purchase_count,avg_days:s.avg_days,typical_qty:s.typical_qty})));
+      resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
+          'content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:S.settings.model||'claude-opus-4-6',max_tokens:32000,temperature:0,
+          messages:[{role:'user',content:[{type:'text',text:`You are a Hebrew grocery product naming expert. You receive SKUs from Israeli supermarket orders with pre-calculated purchase statistics.
+
+Your jobs:
+1. Group SKUs using the shopping-list test: would a shopper write these as ONE item or TWO on a handwritten list?
+   MERGE — same product, different brands/sizes/fat%/packaging/variants:
+   - "קוטג׳ שטראוס 5%" + "קוטג׳ גד 9%" → "קוטג׳"
+   - "חלב 1% תנובה" + "חלב 3% גד" → "חלב"
+   - "ביצי חופש" + "ביצי חופש יח׳" + "תבנית ביצים" → "ביצים"
+   - "קוקה קולה זירו" + "קולה זירו נטול קפאין" → "קולה זירו"
+   - "גבינה צהובה עמק" + "גבינה צהובה עמק קלאסית פרוסות" + "גבינה צהובה עמק 400g" → "גבינה צהובה"
+   DO NOT MERGE — fundamentally different products:
+   - גבינה צהובה ≠ גבינה לבנה ≠ גבינה בולגרית ≠ קוטג׳ ≠ שמנת חמוצה
+   - חלב ≠ משקה שקדים ≠ משקה סויה
+   - עוף ≠ בקר ≠ דג ≠ ביצים
+
+2. For each group: clean Hebrew display name, category key, emoji, unit.
+   - name: shortest name a shopper would write ("חלב" not "חלב תנובה 3%")
+   - Every input SKU must appear in exactly one group's matched_skus — no SKU may be omitted or duplicated.
+   - DO NOT modify purchase_count or avg_days — they are pre-calculated and authoritative.
+
+Category keys (exact): baby, dairy, bread, produce, meat, frozen, snacks, drinks, pantry, cleaning, custom
+Non-food SKUs (hygiene, cosmetics, medicine, restaurant items, service fees, cigarettes) → still include them in matched_skus of a group, but set that group's cat to "exclude". This ensures every SKU is accounted for.
+
+Input SKUs:
+${skuList}
+
+Return JSON only:
+{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","matched_skus":["חלב תנובה 3%","חלב גד 1%"]}],"summary":"תקציר קצר בעברית"}`}]}]})});
+    } else {
+      // ── PDF/image fallback: AI does full extraction ──
+      resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
+          'content-type':'application/json','anthropic-dangerous-direct-browser-access':'true',
+          'anthropic-beta':'pdfs-2024-09-25'},
+        body:JSON.stringify({model:S.settings.model||'claude-opus-4-6',max_tokens:32000,temperature:0,
+          messages:[{role:'user',content:[...mediaImgs,{type:'text',text:`אתה מנתח היסטוריית הזמנות של משפחה ישראלית.
+כלל ברזל: כלול אך ורק מוצרים שמופיעים במפורש בנתונים. אסור להמציא פריטים.
+כלול רק פריטים עם purchase_count ≥ 3 ובממוצע ≤ 90 ימים בין קניות.
+CRITICAL: Never invent or estimate purchase_count. Count actual order appearances only.
+קטגוריות: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom
+אל תכלול: היגיינה, תרופות, מסעדות, Wolt+, מנויים, סיגריות.
+החזר JSON בלבד:
+{"items":[{"name":"שם","cat":"dairy","emoji":"🥛","purchase_count":5,"avg_order_interval_days":7,"typical_qty":2,"unit":"קרטון"}],"summary":"תובנה"}`}]}]})});
+    }
+
+    if(resp.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`Error ${resp.status}`);}
+    const data=await resp.json();
+    const rawTxt=data.content[0]?.text||'';
+    const jsonStr=extractJSON(rawTxt);
+    if(!jsonStr)throw new Error('No JSON in response (stop_reason:'+data.stop_reason+'). Try again.');
+    const result=JSON.parse(jsonStr);
+    // For JSON path: AI provided groupings, JS recalculates all numbers from raw dates
+    if(preCalcSkus){
+      // Fix 3: normalize keys with normN so apostrophe/whitespace variants don't cause silent drops
+      const byName={};for(const s of preCalcSkus)byName[normN(s.name)]=s;
+      const EXCL=new Set(['exclude','hygiene']);
+      const SVCPAT2=/wolt\+|מנוי|subscription|סיגריות/i;
+      const KCATS=new Set(['baby','dairy','bread','produce','meat','frozen','snacks','drinks','pantry','cleaning','custom']);
+      result.items=(result.items||[]).filter(it=>{
+        const cat=it.cat||'custom';
+        if(EXCL.has(cat)||!KCATS.has(cat)||SVCPAT2.test(it.name||'')){console.log('[merge-drop]',it.name,'cat:'+cat);return false;}
+        // Fix 3: normalize lookup names for robust matching
+        const matched=(it.matched_skus||[it.name]).map(n=>byName[normN(n)]).filter(Boolean);
+        if(!matched.length){console.warn('[merge] no SKU match for "'+it.name+'" — dropped');return false;}
+        // Combine dates across all matched SKUs
+        const allDates=[...new Set(matched.flatMap(s=>s.dates))].sort();
+        const count=allDates.length;
+        if(count<3){console.log('[merge-drop]',it.name,'merged count:'+count,'<3');return false;}
+        // Fix 1: reuse median-interval avg from merged dates
+        const ts=allDates.map(d=>new Date(d).getTime());
+        const intervals=[];
+        for(let i=1;i<ts.length;i++)intervals.push((ts[i]-ts[i-1])/86400000);
+        const medInt=median(intervals);
+        const clean=intervals.filter(iv=>iv<=medInt*3);
+        const avg=Math.round(median(clean.length?clean:intervals)*10)/10;
+        if(avg>90){console.log('[merge-drop]',it.name,'avg:'+avg+'d','>90');return false;}
+        it.purchase_count=count;
+        it.avg_order_interval_days=avg;
+        it.span_days=Math.round((ts[ts.length-1]-ts[0])/86400000);
+        it.last_purchase=allDates[allDates.length-1];
+        // Fix 2: median of all raw qtys across matched SKUs
+        const allQtys=matched.flatMap(s=>s.qtys||[]);
+        it.typical_qty=Math.max(1,Math.round(median(allQtys.length?allQtys:[1])));
+        console.log('[merge-pass]',it.name,'skus:'+matched.length,'count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty);
+        return true;
+      });
+      console.log('[merge] kept',result.items.length,'items');
+    }
+    S.analysisRecs=result;save();
+    advWiz(2);
+  }catch(e){
+    if(e.message==='__auth__'){requireApiKey(()=>analyzeWoltHistory(files));return;}
+    const msg=e.message||'Unknown error';
+    S.analysisRecs=null;save();
+    if(errDiv){errDiv.style.display='block';errDiv.textContent='⚠️ '+msg;}
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='✨ נתח';}
+  }
+}
+
+// Analyze receipt (Phase 2 post-shopping): identifies bought items, marks as received
+async function analyzeReceipt(files){
+  if(!files||!files.length){toast('נא לבחור קבצים','dan');return;}
+  if(!S.settings.apiKey){requireApiKey(()=>analyzeReceipt(files));return;}
+  const overlay=document.getElementById('overlay');
+  overlay.style.display='flex';
+  overlay.innerHTML=`<div class="sheet" style="text-align:center;padding:48px 20px">
+    <div class="spinner"></div>
+    <p style="margin-top:16px;color:var(--muted);font-size:14px">מנתח קבלה...<br>זה עשוי לקחת כמה שניות ☕</p></div>`;
+  try{
+    const imgs=await Promise.all(Array.from(files).map(f=>new Promise((res,rej)=>{
+      const r=new FileReader();
+      const isJson=f.type==='application/json'||f.name.endsWith('.json');
+      r.onload=e=>{
+        if(isJson){res({type:'text',text:e.target.result});return;}
+        const d=e.target.result.split(',')[1];
+        res(f.type==='application/pdf'
+          ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:d}}
+          :{type:'image',source:{type:'base64',media_type:f.type.startsWith('image/')?f.type:'image/jpeg',data:d}});
+      };
+      r.onerror=rej;if(isJson)r.readAsText(f);else r.readAsDataURL(f);
+    })));
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
+        'content-type':'application/json','anthropic-dangerous-direct-browser-access':'true',
+        ...(imgs.some(i=>i.type==='document')?{'anthropic-beta':'pdfs-2024-09-25'}:{})},
+      body:JSON.stringify({model:S.settings.model||'claude-opus-4-6',max_tokens:2048,
+        messages:[{role:'user',content:[...imgs,{type:'text',text:`זהה את הפריטים שנקנו בקבלה / חשבון זה.
+החזר JSON תקני בלבד:
+{"items":[{"name":"שם פריט בעברית","qty":"1","unit":"יח׳","category":"קטגוריה"}]}`}]}]})});
+    if(resp.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`Error ${resp.status}`);}
+    const data=await resp.json();
+    const txt=data.content[0]?.text||'';
+    const jsonStr=extractJSON(txt);
+    if(!jsonStr)throw new Error('No JSON found in response. Try again.');
+    const result=JSON.parse(jsonStr);
+    const names=(result.items||[]).map(i=>i.name).filter(Boolean);
+    const updated=markItemsReceived(names);
+    const tripItems=names.map(name=>{
+      const st=S.staples.find(s=>normN(s.n)===normN(name));
+      const ri=(result.items||[]).find(i=>i.name===name);
+      return {sid:st?.id||null,name,qty:Math.max(1,parseFloat(ri?.qty)||1)};
+    });
+    recordPurchase(tripItems,'receipt');
+    if(!S.pendingSuggestions)S.pendingSuggestions=[];
+    checkNewItems(tripItems);
+    checkRemovals();
+    S.weekly=S.weekly.filter(w=>!w.one_time);
+    save();closeModal();render();
+    toast(`${updated} פריטים עודכנו במאגר ✓`,'pri');
+    setTimeout(showNextSuggestion,400);
+  }catch(e){
+    closeModal();
+    if(e.message==='__auth__'){requireApiKey(()=>analyzeReceipt(files));return;}
+    toast('שגיאה: '+(e.message||'בדוק את מפתח ה-API'),'dan');console.error(e);
+  }
+}
+
+// ══════════════════════════════════════════
+// PHASE 2 LEARNING — new item & removal detection
+// ══════════════════════════════════════════
+// Compute stddev of intervals between sorted date-timestamps (ms array)
+function computeStddev(sortedMs){
+  if(sortedMs.length<3)return 0; // need ≥2 intervals = ≥3 events
+  const intervals=[];
+  for(let i=1;i<sortedMs.length;i++)intervals.push((sortedMs[i]-sortedMs[i-1])/86400000);
+  const mean=intervals.reduce((a,b)=>a+b,0)/intervals.length;
+  const variance=intervals.reduce((a,b)=>a+(b-mean)**2,0)/intervals.length;
+  return Math.sqrt(variance);
+}
+// Returns {ok:bool, flagged:bool}
+// ok=true → auto-add; flagged=true → consistent but needs user confirmation; both false → skip
+function meetsThreshold(count,avg,stddev){
+  if(count<3||avg>90)return{ok:false,flagged:false};
+  // Flag (but don't reject) items with high variability — user sees a warning in the modal
+  if(stddev>avg*0.5)return{ok:true,flagged:true};
+  return{ok:true,flagged:false};
+}
+// tripItems: [{sid, name, qty}] — items purchased this trip
+function checkNewItems(tripItems){
+  if(!S.purchaseLog||S.purchaseLog.length<1)return;
+  if(!S.pendingSuggestions)S.pendingSuggestions=[];
+  const sixMonthsAgo=Date.now()-180*86400000;
+  const windowLogs=S.purchaseLog.filter(l=>new Date(l.date).getTime()>=sixMonthsAgo);
+  // Only consider items not already in pantry (check by sid when available, else by name)
+  const newItems=tripItems.filter(it=>!S.staples.find(s=>(it.sid&&s.id===it.sid)||normN(s.n)===normN(it.name)));
+  newItems.forEach(it=>{
+    const nn=normN(it.name);
+    if(S.pendingSuggestions.find(s=>s.type==='add'&&normN(s.name)===nn))return;
+    // Gather logs within window that contain this item (match by name)
+    const logsWithItem=windowLogs.filter(log=>log.items.some(i=>normN(i.name)===nn));
+    // Same-day merge: group by calendar date, accumulate actual qty
+    const byDate={};
+    logsWithItem.forEach(log=>{
+      const dateKey=new Date(log.date).toISOString().slice(0,10);
+      if(!byDate[dateKey])byDate[dateKey]={date:new Date(log.date).getTime(),qty:0};
+      const match=log.items.find(i=>normN(i.name)===nn);
+      byDate[dateKey].qty+=match?.qty||1;
+    });
+    const events=Object.values(byDate).sort((a,b)=>a.date-b.date);
+    const count=events.length;
+    if(count<3)return;
+    const dates=events.map(e=>e.date);
+    const span=count>1?Math.round((dates[dates.length-1]-dates[0])/86400000):0;
+    let avg=7;
+    if(count>1){
+      const intervals=[];
+      for(let i=1;i<dates.length;i++)intervals.push((dates[i]-dates[i-1])/86400000);
+      const medInt=median(intervals);
+      const clean=intervals.filter(iv=>iv<=medInt*3);
+      avg=Math.round(median(clean.length?clean:intervals));
+    }
+    const avgQty=Math.max(1,Math.round(events.reduce((s,e)=>s+e.qty,0)/count));
+    const stddev=computeStddev(dates);
+    const thresh=meetsThreshold(count,avg,stddev);
+    if(!thresh.ok&&!thresh.flagged)return;
+    S.pendingSuggestions.push({type:'add',name:it.name,count,avg,span,avgQty,flagged:thresh.flagged});
+  });
+}
+// Minimum days absent before suggesting removal, per frequency bucket
+function minRemovalDays(f){
+  if(f<=14)return 21;   // weekly → 3 weeks
+  if(f<=30)return 42;   // bi-weekly → 6 weeks
+  if(f<=42)return 90;   // monthly → 3 months
+  return 180;            // bi-monthly → 6 months
+}
+function checkRemovals(){
+  if(!S.purchaseLog||!S.purchaseLog.length)return;
+  if(!S.pendingSuggestions)S.pendingSuggestions=[];
+  S.staples.forEach(s=>{
+    if(!s.active||s.seasonal||s.seasonCat)return;
+    if(s.skipRemovalUntil&&new Date()<new Date(s.skipRemovalUntil))return;
+    if(S.pendingSuggestions.find(sug=>sug.type==='remove'&&sug.sid===s.id))return;
+    // Time gate: absent at least minRemovalDays for this frequency
+    const d=daysSince(s.lastOrdered);
+    if(d===null||d<minRemovalDays(s.f))return;
+    // Trip gate: within the same window, ≥2 recorded trips where item was absent
+    // Protects against false positives during vacations or illness (no trips = no suggestion)
+    const windowStart=Date.now()-minRemovalDays(s.f)*86400000;
+    const tripsInWindow=S.purchaseLog.filter(trip=>new Date(trip.date).getTime()>=windowStart);
+    const absentTrips=tripsInWindow.filter(trip=>!trip.items.some(item=>(item.sid&&item.sid===s.id)||normN(item.name)===normN(s.n)));
+    if(absentTrips.length<2)return;
+    S.pendingSuggestions.push({type:'remove',sid:s.id,name:s.n,days:Math.round(d),freq:s.f});
+  });
+}
+function showNextSuggestion(){
+  if(!S.pendingSuggestions||!S.pendingSuggestions.length)return;
+  // Skip snoozed suggestions — find first one that's ready
+  const now=Date.now();
+  const idx=S.pendingSuggestions.findIndex(s=>!s.showAfter||s.showAfter<=now);
+  if(idx===-1)return; // all snoozed
+  if(idx>0){const[s]=S.pendingSuggestions.splice(idx,1);S.pendingSuggestions.unshift(s);save();}
+  const sug=S.pendingSuggestions[0];
+  if(sug.type==='add'){
+    const bucket=freqBucket(sug.avg);
+    const bucketLbl=FREQS.find(f=>f.v===bucket)?.l||freqLbl(bucket);
+    const sugFreqOpts=FREQS.map(f=>`<option value="${f.v}"${f.v===bucket?' selected':''}>${esc(f.l)}</option>`).join('');
+    const qtyHint=sug.avgQty&&sug.avgQty>1?` · כמות ממוצעת: ${sug.avgQty} יח׳`:'';
+    const flagNote=sug.flagged?`<div style="background:var(--oras);color:var(--ora);border-radius:var(--r2);padding:10px 14px;font-size:13px;margin-bottom:12px">⚠️ הרכישות לא קבועות — בדוק לפני הוספה</div>`:'';
+    openModal('להוסיף לרשימה הקבועה?',`
+      ${flagNote}
+      <div style="text-align:center;font-size:32px;margin-bottom:8px">🛍️</div>
+      <p style="text-align:center;line-height:1.6;margin-bottom:4px">נקנה <strong>${esc(sug.name)}</strong> ${sug.count} פעמים,<br>ממוצע כל ${sug.avg} ימים${qtyHint}</p>
+      <p style="text-align:center;font-size:14px;color:var(--g1);font-weight:700;margin-bottom:16px">להוסיף לרשימה הקבועה כ${bucketLbl}?</p>
+      <div class="fg"><label class="fl">קטגוריה</label>
+        <select class="fsel" id="sug-cat">${catOpts('custom')}</select></div>
+      <div class="fg"><label class="fl">תדירות</label>
+        <select class="fi" id="sug-freq">${sugFreqOpts}</select></div>
+      <button class="btn pri full" onclick="acceptAddSug()">כן, הוסף ✓</button>
+      <button class="btn ghost full" style="margin-top:6px" onclick="snoozeSug()">לא עכשיו (תזכיר עוד 30 יום)</button>
+      <button class="btn ghost full" style="margin-top:6px" onclick="dismissSug()">לא, תודה (לעולם לא)</button>`);
+  } else if(sug.type==='remove'){
+    const cyclesMissed=Math.floor(sug.days/sug.freq);
+    // Human-readable time unit for removal message
+    let timeDesc;
+    if(sug.freq<=14)timeDesc=`${Math.round(sug.days/7)} שבועות`;
+    else if(sug.freq<=30)timeDesc=`${Math.round(sug.days/7)} שבועות`;
+    else timeDesc=`${Math.round(sug.days/30)} חודשים`;
+    openModal('להסיר מהרשימה?',`
+      <div style="text-align:center;font-size:32px;margin-bottom:8px">❓</div>
+      <p style="text-align:center;line-height:1.6;margin-bottom:20px">לא קנית <strong>${esc(sug.name)}</strong> כבר ${timeDesc}<br><span style="color:var(--muted)">(${cyclesMissed} מחזורים שפוספסו)</span></p>
+      <button class="btn dan full" onclick="acceptRemoveSug()">כן, הסר</button>
+      <button class="btn ghost full" style="margin-top:6px" onclick="keepSug()">לא, השאר (שאל שוב אחרי 3 מחזורים)</button>
+      <div style="margin-top:6px;display:flex;gap:6px">
+        <button class="btn ghost" style="flex:1" onclick="markSeasonal()">🌱 עונתי</button>
+        <select class="fsel" id="sug-season" style="flex:1">${['קיץ','סתיו','חורף','אביב'].map(v=>`<option value="${v}">${v}</option>`).join('')}</select>
+      </div>`);
+  }
+}
+function acceptAddSug(){
+  const sug=S.pendingSuggestions?.[0];if(!sug||sug.type!=='add')return;
+  const sel=document.getElementById('sug-freq');
+  const bucket=sel?parseInt(sel.value):freqBucket(sug.avg);
+  const cat=document.getElementById('sug-cat')?.value||'custom';
+  const qty=String(sug.avgQty||1);
+  addStaple(sug.name,cat,CS[cat]?.e,qty,'יח׳',bucket,true);
+  S.pendingSuggestions.shift();save();closeModal();render();
+  toast(`${esc(sug.name)} נוסף לרשימה ${freqLbl(bucket)} ✓`,'pri');
+  setTimeout(showNextSuggestion,350);
+}
+function dismissSug(){
+  if(S.pendingSuggestions)S.pendingSuggestions.shift();
+  save();closeModal();setTimeout(showNextSuggestion,350);
+}
+function snoozeSug(){
+  const sug=S.pendingSuggestions?.[0];if(!sug||sug.type!=='add')return;
+  sug.showAfter=Date.now()+30*86400000;
+  S.pendingSuggestions.shift();
+  S.pendingSuggestions.push(sug);
+  save();closeModal();
+  toast(`${esc(sug.name)} — נזכיר עוד 30 יום`,'wrn');
+  setTimeout(showNextSuggestion,350);
+}
+function acceptRemoveSug(){
+  const sug=S.pendingSuggestions?.[0];if(!sug||sug.type!=='remove')return;
+  S.staples=S.staples.filter(s=>s.id!==sug.sid);
+  S.weekly=S.weekly.filter(w=>w.sid!==sug.sid);
+  S.pendingSuggestions.shift();save();closeModal();render();
+  toast(`${esc(sug.name)} הוסר מהמאגר`,'pri');
+  setTimeout(showNextSuggestion,350);
+}
+function keepSug(){
+  const sug=S.pendingSuggestions?.[0];if(!sug||sug.type!=='remove')return;
+  const st=S.staples.find(s=>s.id===sug.sid);
+  if(st){
+    // Ask again after 3 more cycles (3 × the item's frequency in days)
+    st.skipRemovalUntil=new Date(Date.now()+st.f*3*86400000).toISOString();
+  }
+  S.pendingSuggestions.shift();save();closeModal();
+  toast(`${esc(sug.name)} נשאר — נשאל שוב מאוחר יותר`,'wrn');
+  setTimeout(showNextSuggestion,350);
+}
+function markSeasonal(){
+  const sug=S.pendingSuggestions?.[0];if(!sug||sug.type!=='remove')return;
+  const st=S.staples.find(s=>s.id===sug.sid);
+  if(st){
+    const sel=document.getElementById('sug-season');
+    st.seasonCat=sel?sel.value:'קיץ';
+    delete st.seasonal; // remove old boolean field
+  }
+  S.pendingSuggestions.shift();save();closeModal();render();
+  toast(`${esc(sug.name)} סומן כעונתי (${st?.seasonCat||''}) 🌱`,'pri');
+  setTimeout(showNextSuggestion,350);
+}
+
+// ══════════════════════════════════════════
+// CALIBRATE FREQUENCIES (AI-powered)
+// ══════════════════════════════════════════
+async function calibrateFrequencies(){
+  if(!S.settings.apiKey){requireApiKey(calibrateFrequencies);return;}
+  openModal('✨ מכייל...',
+    `<div class="loading"><div class="spinner"></div>
+    <p>שולח ל-AI לכיוול תדירויות וכמויות<br>למשפחה של 5...</p></div>`);
+  try{
+    const items=S.staples.map(s=>({id:s.id,name:s.n,cat:s.c,qty:s.q,unit:s.u,freq_days:s.f}));
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
+        'content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:S.settings.model||'claude-opus-4-6',max_tokens:4096,
+        messages:[{role:'user',content:`You are calibrating a grocery pantry for an Israeli family of 5: 2 adults, kids ages 7, 5, and 1.5.
+
+Current pantry:
+${JSON.stringify(items,null,2)}
+
+For each item, decide if the current freq_days and qty per purchase are realistic.
+ONLY return items where you suggest changes. Skip items that look correct.
+
+freq_days reference: 7=שבועי(weekly), 21=דו-שבועי(biweekly), 35=חודשי(monthly), 60=דו-חודשי(bimonthly). Min is 7.
+
+Typical consumption for this family:
+- Milk (1L cartons): ~4-5L/week → buy 3 cartons every 5 days, or 4-5 weekly
+- Eggs: ~15/week → 1 tray (12) every 5-7 days
+- Bread: goes fast, every 3-5 days
+- Vegetables/fruit: every 3-5 days
+- Pasta/rice: lasts 3-4 weeks
+- Cleaning items: monthly or longer
+- Pantry staples: monthly
+
+Be conservative — only flag items that are clearly wrong (e.g. qty way off, or frequency implausible for this family size).
+
+Return JSON only:
+{"suggestions":[{"id":"s6","name":"חלב","f":5,"q":"3","u":"קרטון","reason":"Family needs ~4L/week, 3 cartons every 5 days"}],"summary":"One line summary of main changes"}`}]})});
+    if(resp.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`Error ${resp.status}`);}
+    const data=await resp.json();
+    const txt=data.content[0]?.text||'';
+    const jsonStr=extractJSON(txt);
+    if(!jsonStr)throw new Error('No suggestions returned.');
+    const result=JSON.parse(jsonStr);
+    const sugs=(result.suggestions||[]).filter(s=>S.staples.find(x=>x.id===s.id));
+    if(!sugs.length){closeModal();toast('כל התדירויות נראות טוב ✓','pri');return;}
+    const sugsH=sugs.map(s=>{
+      const old=S.staples.find(x=>x.id===s.id);if(!old)return'';
+      const fCh=s.f&&s.f!==old.f;const qCh=s.q&&s.q!==old.q;
+      if(!fCh&&!qCh)return'';
+      return`<div class="post-item sel" data-cal-id="${esc(s.id)}" onclick="this.classList.toggle('sel');this.querySelector('.chk').classList.toggle('on')">
+        ${wIco(old,40)}
+        <div class="i-info">
+          <div class="i-name">${esc(s.name||old.n)}</div>
+          <div class="i-meta">${fCh?`<span style="color:var(--muted)">${freqLbl(old.f)}</span> → <strong>${freqLbl(s.f)}</strong>`:''}${fCh&&qCh?' &nbsp;·&nbsp; ':''}${qCh?`<span style="color:var(--muted)">${esc(old.q)} ${esc(old.u)}</span> → <strong>${esc(s.q)} ${esc(s.u||old.u)}</strong>`:''}</div>
+          ${s.reason?`<div class="i-meta" style="color:var(--txt2);font-style:italic">${esc(s.reason)}</div>`:''}
+        </div>
+        <div class="chk on" style="pointer-events:none">✓</div>
+      </div>`;
+    }).join('');
+    closeModal();
+    openModal('✨ כיוול תדירויות',`
+      ${result.summary?`<div style="background:var(--mint);border-radius:var(--r2);padding:12px;margin-bottom:14px;font-size:13px;color:var(--txt2)">💡 ${esc(result.summary)}</div>`:''}
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">בחר שינויים להחלה:</div>
+      <div class="card" style="margin-bottom:14px" id="cal-list">${sugsH}</div>
+      <div style="display:flex;gap:9px">
+        <button class="btn out" style="flex:1" onclick="closeModal()">ביטול</button>
+        <button class="btn pri" style="flex:1" id="cal-apply">החל נבחרים ✓</button>
+      </div>`);
+    document.getElementById('cal-apply').onclick=()=>{
+      const sel=Array.from(document.querySelectorAll('[data-cal-id].sel')).map(el=>el.dataset.calId);
+      let changed=0;
+      sugs.filter(s=>sel.includes(s.id)).forEach(s=>{
+        const st=S.staples.find(x=>x.id===s.id);
+        if(!st)return;
+        if(s.f)st.f=s.f;
+        if(s.q)st.q=s.q;
+        if(s.u)st.u=s.u;
+        changed++;
+      });
+      save();closeModal();render();
+      toast(`${changed} פריטים עודכנו ✓`,'pri');
+    };
+  }catch(e){
+    closeModal();
+    if(e.message==='__auth__'){requireApiKey(calibrateFrequencies);return;}
+    toast('שגיאה: '+(e.message||'בדוק את מפתח ה-API'),'dan');console.error(e);
+  }
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let _tt;
+function toast(msg,type='pri'){
+  document.querySelector('.toast')?.remove();clearTimeout(_tt);
+  const t=document.createElement('div');t.className=`toast ${type}`;
+  const ico={pri:'✓',dan:'✕',wrn:'⚠️'};
+  t.innerHTML=`<span>${ico[type]||''}</span> ${esc(msg)}`;
+  document.body.appendChild(t);
+  _tt=setTimeout(()=>{t.classList.add('hide');setTimeout(()=>t.remove(),200);},2800);
+}
+
+// ══════════════════════════════════════════
+// EVENT DELEGATION
+// ══════════════════════════════════════════
+function setup(){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+  document.getElementById('btn-settings').addEventListener('click',openSettings);
+  document.getElementById('btn-import').addEventListener('click',openImport);
+  document.getElementById('fab').addEventListener('click',()=>{
+    if(S.tab==='staples')openAddPantryItem();
+    else openAddItem();
+  });
+  document.getElementById('main').addEventListener('click',e=>{
+    const el=e.target.closest('[data-a]');if(!el)return;
+    const a=el.dataset.a;
+    if(a==='tw'){toggleW(el.dataset.wid);render();const w=S.weekly.find(x=>x.id===el.dataset.wid);if(w?.done)toast(`${w.n} הוזמן ✓`,'pri');}
+    if(a==='rw'){removeW(el.dataset.wid);render();}
+    if(a==='cd'){clearDone();render();toast('נוקתה ✓','wrn');}
+    if(a==='gw'){genWeekly();render();toast('הרשימה עודכנה ✨','pri');}
+    if(a==='go-shop')setTab('shop');
+    if(a==='qadd'){quickAdd(el.dataset.sid);render();const s=S.staples.find(x=>x.id===el.dataset.sid);if(s)toast(`${s.n} נוסף ✓`,'pri');}
+    if(a==='fc'){S.catFilt=el.dataset.cat;render();}
+    if(a==='ta'){toggleActive(el.dataset.sid);render();}
+    if(a==='es'){openEditStaple(el.dataset.sid);}
+    if(a==='mo'){markOrdered(el.dataset.sid);render();toast('עודכן ✓','pri');}
+    if(a==='calibrate'){calibrateFrequencies();}
+    if(a==='manual-add'){openAddPantryItem();}
+    if(a==='open-import')openImport();
+    if(a==='ra'){if(_files.length===0){toast('נא לבחור קבצים','dan');return;}analyzeFiles(_files);}
+    if(a==='post-shop')openPostShopping();
+  });
+}
+
+// ══════════════════════════════════════════
+// PWA
+// ══════════════════════════════════════════
+function setupPWA(){
+  try{
+    const c=document.createElement('canvas');c.width=180;c.height=180;
+    const ctx=c.getContext('2d');ctx.fillStyle='#1A7C4A';
+    if(ctx.roundRect)ctx.roundRect(0,0,180,180,36);else ctx.rect(0,0,180,180);
+    ctx.fill();ctx.font='100px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🛒',90,94);
+    let lnk=document.querySelector("link[rel='apple-touch-icon']");
+    if(!lnk){lnk=document.createElement('link');lnk.rel='apple-touch-icon';document.head.appendChild(lnk);}
+    lnk.href=c.toDataURL('image/png');
+  }catch(e){}
+  if('serviceWorker' in navigator){
+    const sw=`const C='hs-v68';const A=['.'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{if(e.request.url.includes('api.anthropic.com'))return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
+    navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+  }
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  setupPWA();load();if(S.tab==='home')S.tab='shop';
+  // Force clear all pantry + shopping data once for v35 — ensures no stale localStorage
+  // data survives across algorithm changes. clearedV is bumped each time a full wipe is needed.
+  if((S.clearedV||0)<35){
+    S.staples=[];S.weekly=[];S.clearedV=35;save();
+  }
+  cleanupStaples();
+  if(!S.staples.length&&!S.setupDone)S.staples=DEFAULT_STAPLES.map(d=>({...d,lastOrdered:null,active:true}));
+  if(!S.purchaseLog)S.purchaseLog=[];
+  // Migrate old purchaseLog format: items was string[], now [{sid,name,qty}]
+  S.purchaseLog=S.purchaseLog.map(log=>{
+    if(log.items&&log.items.length&&typeof log.items[0]==='string'){
+      log.items=log.items.map(name=>{
+        const st=S.staples.find(s=>normN(s.n)===normN(name));
+        return {sid:st?.id||null,name,qty:1};
+      });
+    }
+    return log;
+  });
+  if(!S.pendingSuggestions)S.pendingSuggestions=[];
+  genWeekly();render();setup();updateKeyBadge();
+  if(!S.setupDone)setTimeout(openWizard,350);
+});
+</script>
+</body>
+</html>
