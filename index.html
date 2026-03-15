@@ -578,6 +578,20 @@ function cleanupStaples(){
       }
     }
   });
+  // Relink weekly items whose names match a group pattern → rename + point to base staple
+  GROUPS.forEach(({base,pat})=>{
+    const baseSt=S.staples.find(s=>s.n===base);
+    if(!baseSt) return;
+    S.weekly.forEach(w=>{
+      if(w.n!==base && pat.test(w.n)){
+        w.n=base;
+        w.sid=baseSt.id;
+        w.q=baseSt.q;
+        w.u=baseSt.u||w.u;
+        if(baseSt.e) w.e=baseSt.e;
+      }
+    });
+  });
   // Deduplicate staples by NORMALIZED name — keeps first, but merges to lower f
   const seenMap=new Map(); // normN → staple object
   S.staples=S.staples.filter(s=>{
@@ -686,7 +700,7 @@ function renderStaples(){
   const cats=['all',...Object.keys(CS).filter(k=>S.staples.some(s=>s.c===k))];
   const filt=S.catFilt==='all'?S.staples:S.staples.filter(s=>s.c===S.catFilt);
   let h=`<button class="btn pri full" style="margin-bottom:8px" data-a="manual-add">+ הוסף פריט ידנית</button>`;
-  h+=`<button class="btn sec full" style="margin-bottom:12px" data-a="calibrate">✨ כייל תדירויות עם AI</button>`;
+  h+=`<button class="btn sec full" style="margin-bottom:12px" data-a="calibrate">✨ כוונן למשפחה שלי</button>`;
   h+=`<div class="chips">`;
   cats.forEach(c=>{
     const lbl=c==='all'?`הכל (${S.staples.filter(s=>s.active).length})`:`${CS[c]?.e||''} ${CS[c]?.l||c}`;
@@ -1999,7 +2013,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v68';const A=['.'];
+    const sw=`const C='hs-v69';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.url.includes('api.anthropic.com'))return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
