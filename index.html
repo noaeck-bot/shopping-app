@@ -1510,8 +1510,25 @@ async function analyzeWoltHistory(files){
       const skuNames=skusForAI.map(s=>s.name);
       const _promptTxt='Group these Hebrew grocery SKUs. Shopping-list rule: same product different brands/sizes/fat% → merge. Different products → keep separate.\nMERGE: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\nKEEP SEPARATE: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים\nCategories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\nNon-food→exclude. Every SKU in exactly one group.\nSKUs:\n'+JSON.stringify(skuNames)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","matched_skus":["חלב תנובה 3%"]}],"summary":"..."}';
       if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ל-AI...';}
-      resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8000,messages:[{role:'user',content:_promptTxt}]})});
-      bodyTxt=await resp.text();
+      // Use XHR instead of fetch — more reliable on Android Chrome after FileReader
+      const _xhrBody=JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8000,messages:[{role:'user',content:_promptTxt}]});
+      const _xhrResp=await new Promise((res,rej)=>{
+        const xhr=new XMLHttpRequest();
+        xhr.open('POST','https://api.anthropic.com/v1/messages');
+        xhr.setRequestHeader('x-api-key',S.settings.apiKey);
+        xhr.setRequestHeader('anthropic-version','2023-06-01');
+        xhr.setRequestHeader('content-type','application/json');
+        xhr.setRequestHeader('anthropic-dangerous-direct-browser-access','true');
+        xhr.timeout=180000;
+        xhr.onload=()=>res(xhr);
+        xhr.onerror=()=>rej(new Error('XHR שגיאת רשת'));
+        xhr.ontimeout=()=>rej(new Error('XHR פסק זמן'));
+        xhr.send(_xhrBody);
+      });
+      if(_xhrResp.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
+      if(_xhrResp.status<200||_xhrResp.status>=300){let em='Error '+_xhrResp.status;try{em=JSON.parse(_xhrResp.responseText).error?.message||em;}catch{}throw new Error(em);}
+      bodyTxt=_xhrResp.responseText;
+      resp={ok:true,status:_xhrResp.status}; // stub for shared code below
     } else {
       // ── PDF/image fallback: AI does full extraction ──
       resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1988,7 +2005,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v80';
+    const sw=`const C='hs-v81';
 self.addEventListener('install',e=>{self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});`;
     const blob=URL.createObjectURL(new Blob([sw],{type:'text/javascript'}));
