@@ -1509,11 +1509,9 @@ async function analyzeWoltHistory(files){
       console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥2 purchases) to AI for semantic grouping');
       const skuNames=skusForAI.map(s=>s.name);
       const _promptTxt='Group these Hebrew grocery SKUs. Shopping-list rule: same product different brands/sizes/fat% → merge. Different products → keep separate.\nMERGE: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\nKEEP SEPARATE: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים\nCategories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\nNon-food→exclude. Every SKU in exactly one group.\nSKUs:\n'+JSON.stringify(skuNames)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","matched_skus":["חלב תנובה 3%"]}],"summary":"..."}';
-      const _reqBody=JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8000,messages:[{role:'user',content:_promptTxt}]});
-      if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ('+Math.round(_reqBody.length/1024)+'KB)...';}
-      try{resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:_reqBody});}catch(fe){throw new Error('fetch נכשל '+Math.round(_reqBody.length/1024)+'KB: '+fe.message);}
-      if(errDiv){errDiv.textContent='מקבל תגובה...';}
-      try{bodyTxt=await resp.text();}catch(te){throw new Error('text נכשל status='+resp.status+': '+te.message);}
+      if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ל-AI...';}
+      resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8000,messages:[{role:'user',content:_promptTxt}]})});
+      bodyTxt=await resp.text();
     } else {
       // ── PDF/image fallback: AI does full extraction ──
       resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1990,7 +1988,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v78';const A=['.'];
+    const sw=`const C='hs-v79';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
