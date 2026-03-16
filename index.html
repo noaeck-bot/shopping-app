@@ -1505,9 +1505,10 @@ async function analyzeWoltHistory(files){
       // ── JSON path: JS calculates all stats, AI does semantic grouping only ──
       preCalcSkus=preCalcWoltStats(jsonTexts);
       if(!preCalcSkus.length)throw new Error('לא נמצאו פריטים בקובץ. בדוק שהקובץ הוא ייצוא הזמנות Wolt תקין.');
-      const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=2);
+      const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=2).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,250);
       console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥2 purchases) to AI for semantic grouping');
       const skuList=JSON.stringify(skusForAI.map(s=>({name:s.name,purchase_count:s.purchase_count,avg_days:s.avg_days,typical_qty:s.typical_qty})));
+      console.log('[analysis] skuList size:',skuList.length,'chars');
       resp=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
@@ -1606,8 +1607,9 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
     S.analysisRecs=result;save();
     advWiz(2);
   }catch(e){
+    console.error('[wolt-analysis-error]',e.name,e.message,e);
     if(e.message==='__auth__'){requireApiKey(()=>analyzeWoltHistory(files));return;}
-    const msg=e.message||'Unknown error';
+    const msg=(e.name&&e.name!=='Error'?e.name+': ':'')+( e.message||'Unknown error');
     S.analysisRecs=null;save();
     if(errDiv){errDiv.style.display='block';errDiv.textContent='⚠️ '+msg;}
   }finally{
@@ -2013,7 +2015,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v70';const A=['.'];
+    const sw=`const C='hs-v71';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
