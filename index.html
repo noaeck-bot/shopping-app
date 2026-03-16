@@ -1513,7 +1513,7 @@ async function analyzeWoltHistory(files){
         method:'POST',
         headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
           'content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({model:S.settings.model||'claude-opus-4-6',max_tokens:10000,
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8000,
           messages:[{role:'user',content:[{type:'text',text:`You are a Hebrew grocery product naming expert. You receive SKUs from Israeli supermarket orders with pre-calculated purchase statistics.
 
 Your jobs:
@@ -2015,7 +2015,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v72';const A=['.'];
+    const sw=`const C='hs-v73';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
