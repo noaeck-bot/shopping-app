@@ -1561,8 +1561,9 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
     }
 
     if(resp.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
-    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`Error ${resp.status}`);}
-    const data=await resp.json();
+    const bodyTxt=await resp.text();
+    if(!resp.ok){let em='Error '+resp.status;try{em=JSON.parse(bodyTxt).error?.message||em;}catch{}throw new Error(em);}
+    let data;try{data=JSON.parse(bodyTxt);}catch(e){throw new Error('שגיאה בפענוח תגובה');}
     const rawTxt=data.content[0]?.text||'';
     const jsonStr=extractJSON(rawTxt);
     if(!jsonStr)throw new Error('No JSON in response (stop_reason:'+data.stop_reason+'). Try again.');
@@ -2015,11 +2016,16 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v73';const A=['.'];
+    const sw=`const C='hs-v74';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
-    navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+    const blob=URL.createObjectURL(new Blob([sw],{type:'text/javascript'}));
+    // Unregister stale SWs before registering new one — ensures fresh code after deployments
+    navigator.serviceWorker.getRegistrations()
+      .then(regs=>Promise.all(regs.map(r=>r.unregister())))
+      .then(()=>navigator.serviceWorker.register(blob))
+      .catch(()=>navigator.serviceWorker.register(blob).catch(()=>{}));
   }
 }
 
