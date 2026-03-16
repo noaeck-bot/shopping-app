@@ -1509,42 +1509,12 @@ async function analyzeWoltHistory(files){
       console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥2 purchases) to AI for semantic grouping');
       const skuList=JSON.stringify(skusForAI.map(s=>({name:s.name,purchase_count:s.purchase_count,avg_days:s.avg_days,typical_qty:s.typical_qty})));
       console.log('[analysis] skuList size:',skuList.length,'chars');
-      if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ל-AI...';}
-      try{resp=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST',
-        headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
-          'content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8000,
-          messages:[{role:'user',content:[{type:'text',text:`You are a Hebrew grocery product naming expert. You receive SKUs from Israeli supermarket orders with pre-calculated purchase statistics.
-
-Your jobs:
-1. Group SKUs using the shopping-list test: would a shopper write these as ONE item or TWO on a handwritten list?
-   MERGE — same product, different brands/sizes/fat%/packaging/variants:
-   - "קוטג׳ שטראוס 5%" + "קוטג׳ גד 9%" → "קוטג׳"
-   - "חלב 1% תנובה" + "חלב 3% גד" → "חלב"
-   - "ביצי חופש" + "ביצי חופש יח׳" + "תבנית ביצים" → "ביצים"
-   - "קוקה קולה זירו" + "קולה זירו נטול קפאין" → "קולה זירו"
-   - "גבינה צהובה עמק" + "גבינה צהובה עמק קלאסית פרוסות" + "גבינה צהובה עמק 400g" → "גבינה צהובה"
-   DO NOT MERGE — fundamentally different products:
-   - גבינה צהובה ≠ גבינה לבנה ≠ גבינה בולגרית ≠ קוטג׳ ≠ שמנת חמוצה
-   - חלב ≠ משקה שקדים ≠ משקה סויה
-   - עוף ≠ בקר ≠ דג ≠ ביצים
-
-2. For each group: clean Hebrew display name, category key, emoji, unit.
-   - name: shortest name a shopper would write ("חלב" not "חלב תנובה 3%")
-   - Every input SKU must appear in exactly one group's matched_skus — no SKU may be omitted or duplicated.
-   - DO NOT modify purchase_count or avg_days — they are pre-calculated and authoritative.
-
-Category keys (exact): baby, dairy, bread, produce, meat, frozen, snacks, drinks, pantry, cleaning, custom
-Non-food SKUs (hygiene, cosmetics, medicine, restaurant items, service fees, cigarettes) → still include them in matched_skus of a group, but set that group's cat to "exclude". This ensures every SKU is accounted for.
-
-Input SKUs:
-${skuList}
-
-Return JSON only:
-{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","matched_skus":["חלב תנובה 3%","חלב גד 1%"]}],"summary":"תקציר קצר בעברית"}`}]}]})});}catch(fe){throw new Error('שלב fetch נכשל: '+fe.message);}
+      const _promptTxt='You are a Hebrew grocery product naming expert. You receive SKUs from Israeli supermarket orders with pre-calculated purchase statistics.\n\nYour jobs:\n1. Group SKUs using the shopping-list test: would a shopper write these as ONE item or TWO on a handwritten list?\n   MERGE same product different brands/sizes/fat%: "קוטג\' שטראוס 5%" + "קוטג\' גד 9%" → "קוטג\'"; "חלב 1% תנובה" + "חלב 3% גד" → "חלב"\n   DO NOT MERGE fundamentally different: גבינה צהובה ≠ גבינה לבנה ≠ קוטג\'; חלב ≠ משקה שקדים\n2. For each group: clean Hebrew display name, category key, emoji, unit.\n   Every input SKU must appear in exactly one group\'s matched_skus.\nCategory keys: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\nNon-food → cat="exclude"\nInput SKUs:\n'+skuList+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","matched_skus":["חלב תנובה 3%"]}],"summary":"..."}';
+      const _reqBody=JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8000,messages:[{role:'user',content:_promptTxt}]});
+      if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ('+Math.round(_reqBody.length/1024)+'KB)...';}
+      try{resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:_reqBody});}catch(fe){throw new Error('fetch נכשל '+Math.round(_reqBody.length/1024)+'KB: '+fe.message);}
       if(errDiv){errDiv.textContent='מקבל תגובה...';}
-      let bodyTxt;try{bodyTxt=await resp.text();}catch(te){throw new Error('שלב text נכשל (status='+resp.status+'): '+te.message);}
+      let bodyTxt;try{bodyTxt=await resp.text();}catch(te){throw new Error('text נכשל status='+resp.status+': '+te.message);}
     } else {
       // ── PDF/image fallback: AI does full extraction ──
       resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -2021,7 +1991,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v75';const A=['.'];
+    const sw=`const C='hs-v76';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
