@@ -372,19 +372,22 @@ const CS = {
 };
 
 const FREQS = [
-  {v:7, l:'שבועי'},
-  {v:21,l:'דו-שבועי'},
-  {v:35,l:'חודשי'},
-  {v:60,l:'דו-חודשי'},
+  {v:3,l:'פעמיים בשבוע'},{v:5,l:'כל 5 ימים'},{v:7,l:'שבועי'},
+  {v:10,l:'כל 10 ימים'},{v:14,l:'דו-שבועי'},{v:21,l:'כל 3 שבועות'},
+  {v:30,l:'חודשי'},{v:45,l:'כל 6 שבועות'},
 ];
-// Map avg_order_interval_days → FREQS bucket value
-// Midpoints: שבועי <14d, דו-שבועי <28d, חודשי <48d, דו-חודשי ≥48d
+// Map avg_order_interval_days → nearest FREQS bucket value
+// Midpoints between consecutive values: 4,6,9,12,18,26,38
 function freqBucket(days){
   const d=Math.max(1,Math.round(days));
-  if(d<14)return 7;
-  if(d<28)return 21;
-  if(d<48)return 35;
-  return 60;
+  if(d<4)return 3;
+  if(d<6)return 5;
+  if(d<9)return 7;
+  if(d<12)return 10;
+  if(d<18)return 14;
+  if(d<26)return 21;
+  if(d<38)return 30;
+  return 45;
 }
 // Returns true if today falls within the given season (Israel climate)
 function isInSeason(seasonCat){
@@ -1505,8 +1508,8 @@ async function analyzeWoltHistory(files){
       // ── JSON path: JS calculates all stats, AI does semantic grouping only ──
       preCalcSkus=preCalcWoltStats(jsonTexts);
       if(!preCalcSkus.length)throw new Error('לא נמצאו פריטים בקובץ. בדוק שהקובץ הוא ייצוא הזמנות Wolt תקין.');
-      const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=3).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,150);
-      console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥3 purchases) to AI for semantic grouping');
+      const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=2).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,200);
+      console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥2 purchases) to AI for semantic grouping');
       const skuNames=skusForAI.map(s=>s.name);
       const _promptTxt='Group Hebrew grocery SKUs by index. Merge if a shopper would write ONE item on a list:\n'+
 '- Same product, different brand/size/fat%: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\n'+
@@ -2024,7 +2027,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v84';const A=['.'];
+    const sw=`const C='hs-v85';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
