@@ -1430,6 +1430,51 @@ function median(arr){
   return s.length%2?s[m]:(s[m-1]+s[m])/2;
 }
 
+// ── Detect purchase unit from product name (used as hint to AI)
+function detectUnit(name){
+  if(/ק"ג|ק׳ג|ק\"ג|\bקג\b/i.test(name))return 'ק"ג';
+  if(/^(חלב|שמנת)\b/i.test(name))return 'קרטון';
+  return "יח'";
+}
+
+// ── Normalize a SKU name to a grouping key (strips brand/size/packaging noise)
+function normalizeSkuKey(name){
+  let n=name;
+  n=n.replace(/\([^)]*\)/g,'');
+  n=n.replace(/\d+[\.,]?\d*\s*(גרם|גר[׳]?|מ"ל|מ׳ל|ליטר|ל[׳]?|ק"ג|ק׳ג|יח[׳]?|אחוז)/gi,'');
+  n=n.replace(/\b\d+\.?\d*\s*%/g,'');
+  n=n.replace(/\b(שטראוס|תנובה|עלית|אסם|בטר|גד|ניסו|דנונה|נסטלה|זוגלובק|אנג[׳']ל)\b/gi,'');
+  n=n.replace(/\b(גדול[ה]?|קטנ[ה]?|מיני|ענק|קינג|קלאסי[ת]?|רגיל[ה]?)\b/gi,'');
+  return n.replace(/\s+/g,' ').trim();
+}
+
+// ── Group pre-calculated SKUs by normalized key, combining dates+stats
+function groupSkusByNormKey(skus){
+  const map={};
+  for(const s of skus){
+    const key=normalizeSkuKey(s.name)||s.name;
+    if(!map[key])map[key]={normKey:key,skus:[],dates:[],qtys:[]};
+    map[key].skus.push(s.name);
+    map[key].dates.push(...(s.dates||[]));
+    map[key].qtys.push(...(s.qtys||[]));
+  }
+  return Object.values(map).map(g=>{
+    const dates=[...new Set(g.dates)].sort();
+    const count=dates.length;
+    const typical_qty=Math.max(1,Math.round(median(g.qtys.length?g.qtys:[1])));
+    let avg_days=0,span_days=0;
+    if(count>1){
+      const ts=dates.map(d=>new Date(d).getTime());
+      span_days=Math.round((ts[ts.length-1]-ts[0])/86400000);
+      const ivs=[];for(let i=1;i<ts.length;i++)ivs.push((ts[i]-ts[i-1])/86400000);
+      const mi=median(ivs);
+      const clean=ivs.filter(iv=>iv<=mi*3);
+      avg_days=Math.round(median(clean.length?clean:ivs)*10)/10;
+    }
+    return {normKey:g.normKey,skus:g.skus,purchase_count:count,span_days,avg_days,typical_qty,detected_unit:detectUnit(g.skus[0]),dates,qtys:g.qtys};
+  });
+}
+
 // ── JS pre-calculates per-SKU stats for all SKUs (AI handles semantic grouping)
 function preCalcWoltStats(jsonTexts){
   const BLPAT=/wolt\+|מנוי|subscription|סיגריות/i;
@@ -1502,33 +1547,35 @@ async function analyzeWoltHistory(files){
       if(isJson)r.readAsText(f);else r.readAsDataURL(f);
     })));
 
-    let resp,preCalcSkus=null,bodyTxt=null,skusForAI=null;
+    let resp,preCalcSkus=null,bodyTxt=null,groupsForAI=null;
 
     if(jsonTexts.length){
-      // ── JSON path: JS calculates all stats, AI does semantic grouping only ──
+      // ── JSON path: JS groups SKUs by normalized key, AI names/categorises groups ──
       preCalcSkus=preCalcWoltStats(jsonTexts);
       if(!preCalcSkus.length)throw new Error('לא נמצאו פריטים בקובץ. בדוק שהקובץ הוא ייצוא הזמנות Wolt תקין.');
-      skusForAI=preCalcSkus.filter(s=>s.purchase_count>=2).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,200);
-      console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥2 purchases) to AI for semantic grouping');
-      const skuNames=skusForAI.map(s=>s.name);
-      const _promptTxt='Group Hebrew grocery SKUs by index. Merge if a shopper would write ONE item on a list:\n'+
-'- Same product, different brand/size/fat%: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\n'+
+      const allGroups=groupSkusByNormKey(preCalcSkus);
+      groupsForAI=allGroups.filter(g=>g.purchase_count>=2).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,150);
+      console.log('[analysis]',preCalcSkus.length,'SKUs →',allGroups.length,'normalized groups →',groupsForAI.length,'(≥2) sent to AI');
+      const aiInput=groupsForAI.map(g=>({key:g.normKey,skus:g.skus,unit:g.detected_unit}));
+      const _promptTxt='Group Hebrew grocery items into pantry staples. Input is pre-grouped by normalized key.\n'+
+'Each input group may contain variant SKU names (same product, different brand/size/fat%).\n'+
+'Merge groups only if they represent ONE shopping-list item:\n'+
+'- All bread roll types (המבורגר/ארוכות/שיפון/כוס/דגן) → always merge → "לחמניות"\n'+
 '- Flavor/variety variants of same product line: "גמדים ארוחת בוקר"+"גמדים סקוויז"→"גמדים"\n'+
-'- All bread roll types (המבורגר/ארוכות/שיפון/כוס): always merge→"לחמניות"\n'+
 'Keep separate: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים; לחם פרוס≠חלה\n'+
 'Categories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\n'+
-'Non-food→exclude. Every index in exactly one group.\n'+
-'UNIT = purchase unit (NOT weight in product name). Rules:\n'+
-'- Packaged goods (dairy cup/tub, can, bag, box, bottle, stick): unit="יח\'"\n'+
-'- Loose produce or meat bought by weight: unit="ק\\"ג"\n'+
+'Non-food→exclude. Every group index in exactly one output item.\n'+
+'UNIT: use provided unit hint. Override only if clearly wrong:\n'+
 '- Milk/juice cartons: unit="קרטון"\n'+
+'- Loose produce or meat by weight: unit="ק\\"ג"\n'+
+'- Packaged goods (cup, can, bag, box, bottle): unit="יח\'"\n'+
 '- NEVER use "גר" as unit\n'+
-'Input (0-indexed):\n'+JSON.stringify(skuNames)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","idx":[0,1]}],"summary":"..."}';
-      if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ל-AI...';}
+'Input (0-indexed groups):\n'+JSON.stringify(aiInput)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","idx":[0]}],"summary":"..."}';
+      if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+groupsForAI.length+' קבוצות ל-AI...';}
       // Acquire wake lock to prevent screen sleep killing the connection on Android
       let _wl=null;try{if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen');}catch(e){}
       // Use XHR instead of fetch — more reliable on Android Chrome after FileReader
-      const _xhrBody=JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8192,messages:[{role:'user',content:_promptTxt}]});
+      const _xhrBody=JSON.stringify({model:'claude-opus-4-6',max_tokens:8192,messages:[{role:'user',content:_promptTxt}]});
       const _xhrResp=await new Promise((res,rej)=>{
         const xhr=new XMLHttpRequest();
         xhr.open('POST','https://api.anthropic.com/v1/messages');
@@ -1580,21 +1627,20 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
       const EXCL=new Set(['exclude','hygiene']);
       const SVCPAT2=/wolt\+|מנוי|subscription|סיגריות/i;
       const KCATS=new Set(['baby','dairy','bread','produce','meat','frozen','snacks','drinks','pantry','cleaning','custom']);
-      // byName fallback for old matched_skus format; idx is primary
-      const byName={};for(const s of skusForAI)byName[normN(s.name)]=s;
+      // byNormKey fallback when AI omits idx
+      const byNormKey={};for(const g of groupsForAI)byNormKey[g.normKey]=g;
       result.items=(result.items||[]).filter(it=>{
         const cat=it.cat||'custom';
         if(EXCL.has(cat)||!KCATS.has(cat)||SVCPAT2.test(it.name||'')){console.log('[merge-drop]',it.name,'cat:'+cat);return false;}
-        // idx (index array) is primary; fall back to matched_skus name lookup
+        // idx references group indices; fall back to normKey lookup
         const matched=it.idx
-          ?(it.idx).map(i=>skusForAI[i]).filter(Boolean)
-          :(it.matched_skus||[it.name]).map(n=>byName[normN(n)]).filter(Boolean);
-        if(!matched.length){console.warn('[merge] no SKU match for "'+it.name+'" — dropped');return false;}
-        // Combine dates across all matched SKUs
-        const allDates=[...new Set(matched.flatMap(s=>s.dates))].sort();
+          ?(it.idx).map(i=>groupsForAI[Math.floor(Number(i))]).filter(Boolean)
+          :[byNormKey[normalizeSkuKey(it.name||'')]].filter(Boolean);
+        if(!matched.length){console.warn('[merge] no group match for "'+it.name+'" — dropped');return false;}
+        // Combine dates across all matched groups
+        const allDates=[...new Set(matched.flatMap(g=>g.dates))].sort();
         const count=allDates.length;
         if(count<3){console.log('[merge-drop]',it.name,'merged count:'+count,'<3');return false;}
-        // Fix 1: reuse median-interval avg from merged dates
         const ts=allDates.map(d=>new Date(d).getTime());
         const intervals=[];
         for(let i=1;i<ts.length;i++)intervals.push((ts[i]-ts[i-1])/86400000);
@@ -1606,12 +1652,12 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
         it.avg_order_interval_days=avg;
         it.span_days=Math.round((ts[ts.length-1]-ts[0])/86400000);
         it.last_purchase=allDates[allDates.length-1];
-        // Fix 2: median of all raw qtys across matched SKUs
-        const allQtys=matched.flatMap(s=>s.qtys||[]);
+        const allQtys=matched.flatMap(g=>g.qtys||[]);
         it.typical_qty=Math.max(1,Math.round(median(allQtys.length?allQtys:[1])));
-        // Safety: if AI returned גר as unit, override to יח' (grams is never a shopping unit)
-        if(it.unit==='גר'||it.unit==='גרם'||it.unit==='gr'||it.unit==='g')it.unit='יח\'';
-        console.log('[merge-pass]',it.name,'skus:'+matched.length,'count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty,'unit:'+it.unit);
+        // Use detected_unit as fallback; always reject גר
+        if(!it.unit||it.unit==='גר'||it.unit==='גרם'||it.unit==='gr'||it.unit==='g')
+          it.unit=matched[0]?.detected_unit||"יח'";
+        console.log('[merge-pass]',it.name,'groups:'+matched.length,'count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty,'unit:'+it.unit);
         return true;
       });
       console.log('[merge] kept',result.items.length,'items');
@@ -2027,7 +2073,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v86';const A=['.'];
+    const sw=`const C='hs-v88';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
