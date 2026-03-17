@@ -366,6 +366,7 @@ const CS = {
   hygiene: {bg:'#FAF5FF',e:'🧴',l:'היגיינה'},
   cleaning:{bg:'#F0F9FF',e:'🧹',l:'ניקיון'},
   snacks:  {bg:'#FFF7ED',e:'🍿',l:'חטיפים'},
+  drinks:  {bg:'#EFF6FF',e:'🥤',l:'משקאות'},
   frozen:  {bg:'#F0FFFE',e:'❄️',l:'קפוא'},
   meat:    {bg:'#FFF5F5',e:'🥩',l:'בשר ודגים'},
   custom:  {bg:'#F8FAFC',e:'📦',l:'אחר'},
@@ -1355,20 +1356,30 @@ async function analyzeFiles(files){
       };
       r.onerror=rej;if(isJson)r.readAsText(f);else r.readAsDataURL(f);
     })));
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'x-api-key':S.settings.apiKey,'anthropic-version':'2023-06-01',
-        'content-type':'application/json','anthropic-dangerous-direct-browser-access':'true',
-        ...(imgs.some(i=>i.type==='document')?{'anthropic-beta':'pdfs-2024-09-25'}:{})},
-      body:JSON.stringify({model:S.settings.model||'claude-opus-4-6',max_tokens:16000,
-        messages:[{role:'user',content:[...imgs,{type:'text',text:`נתח את הקבצים האלה (צילומי מסך של הזמנות Wolt, קבלות סופרמרקט, או רשימות קניות).
+    const hasPdf=imgs.some(i=>i.type==='document');
+    const _afBody=JSON.stringify({model:S.settings.model||'claude-opus-4-6',max_tokens:16000,
+      messages:[{role:'user',content:[...imgs,{type:'text',text:`נתח את הקבצים האלה (צילומי מסך של הזמנות Wolt, קבלות סופרמרקט, או רשימות קניות).
 זהה כל פריט ואת הקטגוריה שלו.
-קטגוריות: baby, dairy, bread, produce, pantry, hygiene, cleaning, snacks, frozen, meat, custom
+קטגוריות: baby, dairy, bread, produce, pantry, hygiene, cleaning, snacks, frozen, meat, drinks, custom
 החזר JSON תקני בלבד:
-{"items":[{"name":"שם פריט","category":"קטגוריה","qty":"1","unit":"יח׳","emoji":"🥛"}],"insights":["תובנה 1"]}`}]}]})});
-    if(resp.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
-    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`Error ${resp.status}`);}
-    const data=await resp.json();
+{"items":[{"name":"שם פריט","category":"קטגוריה","qty":"1","unit":"יח׳","emoji":"🥛"}],"insights":["תובנה 1"]}`}]}]});
+    let _afWl=null;try{if('wakeLock' in navigator)_afWl=await navigator.wakeLock.request('screen');}catch(e){}
+    const _afXhr=await new Promise((res,rej)=>{
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST','https://api.anthropic.com/v1/messages');
+      xhr.setRequestHeader('x-api-key',S.settings.apiKey);
+      xhr.setRequestHeader('anthropic-version','2023-06-01');
+      xhr.setRequestHeader('content-type','application/json');
+      xhr.setRequestHeader('anthropic-dangerous-direct-browser-access','true');
+      if(hasPdf)xhr.setRequestHeader('anthropic-beta','pdfs-2024-09-25');
+      xhr.timeout=120000;
+      xhr.onload=()=>res(xhr);xhr.onerror=()=>rej(new Error('XHR שגיאת רשת'));xhr.ontimeout=()=>rej(new Error('XHR פסק זמן'));
+      xhr.send(_afBody);
+    });
+    if(_afWl)try{_afWl.release();}catch(e){}
+    if(_afXhr.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
+    if(_afXhr.status<200||_afXhr.status>=300){let em='Error '+_afXhr.status;try{em=JSON.parse(_afXhr.responseText).error?.message||em;}catch{}throw new Error(em);}
+    const data=JSON.parse(_afXhr.responseText);
     const txt=data.content[0]?.text||'';
     const jsonStr=extractJSON(txt);
     if(!jsonStr)throw new Error('No JSON found in response. Try again.');
@@ -1434,7 +1445,7 @@ function median(arr){
 function detectUnit(name){
   if(/ק"ג|ק׳ג|ק\"ג|\bקג\b/i.test(name))return 'ק"ג';
   if(/^(חלב|שמנת)\b/i.test(name))return 'קרטון';
-  return "יח'";
+  return 'יח׳';
 }
 
 // ── Normalize a SKU name to a grouping key (strips brand/size/packaging noise)
@@ -2073,7 +2084,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v88';const A=['.'];
+    const sw=`const C='hs-v89';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
