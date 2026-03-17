@@ -1508,7 +1508,19 @@ async function analyzeWoltHistory(files){
       const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=3).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,150);
       console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥3 purchases) to AI for semantic grouping');
       const skuNames=skusForAI.map(s=>s.name);
-      const _promptTxt='Group these Hebrew grocery SKUs by index. Shopping-list rule: same product different brands/sizes/fat% → merge. Different products → keep separate.\nMERGE: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\nKEEP SEPARATE: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים\nCategories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\nNon-food→exclude. Every index in exactly one group.\nInput (0-indexed array):\n'+JSON.stringify(skuNames)+'\nReturn JSON only — use idx (array of input indices) NOT matched_skus:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","idx":[0,1,2]}],"summary":"..."}';
+      const _promptTxt='Group Hebrew grocery SKUs by index. Merge if a shopper would write ONE item on a list:\n'+
+'- Same product, different brand/size/fat%: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\n'+
+'- Flavor/variety variants of same product line: "גמדים ארוחת בוקר"+"גמדים סקוויז"→"גמדים"\n'+
+'- All bread roll types (המבורגר/ארוכות/שיפון/כוס): always merge→"לחמניות"\n'+
+'Keep separate: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים; לחם פרוס≠חלה\n'+
+'Categories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\n'+
+'Non-food→exclude. Every index in exactly one group.\n'+
+'UNIT = purchase unit (NOT weight in product name). Rules:\n'+
+'- Packaged goods (dairy cup/tub, can, bag, box, bottle, stick): unit="יח\'"\n'+
+'- Loose produce or meat bought by weight: unit="ק\\"ג"\n'+
+'- Milk/juice cartons: unit="קרטון"\n'+
+'- NEVER use "גר" as unit\n'+
+'Input (0-indexed):\n'+JSON.stringify(skuNames)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","idx":[0,1]}],"summary":"..."}';
       if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ל-AI...';}
       // Acquire wake lock to prevent screen sleep killing the connection on Android
       let _wl=null;try{if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen');}catch(e){}
@@ -1594,7 +1606,9 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
         // Fix 2: median of all raw qtys across matched SKUs
         const allQtys=matched.flatMap(s=>s.qtys||[]);
         it.typical_qty=Math.max(1,Math.round(median(allQtys.length?allQtys:[1])));
-        console.log('[merge-pass]',it.name,'skus:'+matched.length,'count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty);
+        // Safety: if AI returned גר as unit, override to יח' (grams is never a shopping unit)
+        if(it.unit==='גר'||it.unit==='גרם'||it.unit==='gr'||it.unit==='g')it.unit='יח\'';
+        console.log('[merge-pass]',it.name,'skus:'+matched.length,'count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty,'unit:'+it.unit);
         return true;
       });
       console.log('[merge] kept',result.items.length,'items');
@@ -2010,7 +2024,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v83';const A=['.'];
+    const sw=`const C='hs-v84';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
