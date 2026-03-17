@@ -1505,13 +1505,13 @@ async function analyzeWoltHistory(files){
       // ── JSON path: JS calculates all stats, AI does semantic grouping only ──
       preCalcSkus=preCalcWoltStats(jsonTexts);
       if(!preCalcSkus.length)throw new Error('לא נמצאו פריטים בקובץ. בדוק שהקובץ הוא ייצוא הזמנות Wolt תקין.');
-      const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=2).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,250);
-      console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥2 purchases) to AI for semantic grouping');
+      const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=3).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,150);
+      console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥3 purchases) to AI for semantic grouping');
       const skuNames=skusForAI.map(s=>s.name);
       const _promptTxt='Group these Hebrew grocery SKUs. Shopping-list rule: same product different brands/sizes/fat% → merge. Different products → keep separate.\nMERGE: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\nKEEP SEPARATE: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים\nCategories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\nNon-food→exclude. Every SKU in exactly one group.\nSKUs:\n'+JSON.stringify(skuNames)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","matched_skus":["חלב תנובה 3%"]}],"summary":"..."}';
       if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ל-AI...';}
       // Use XHR instead of fetch — more reliable on Android Chrome after FileReader
-      const _xhrBody=JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8000,messages:[{role:'user',content:_promptTxt}]});
+      const _xhrBody=JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8192,messages:[{role:'user',content:_promptTxt}]});
       const _xhrResp=await new Promise((res,rej)=>{
         const xhr=new XMLHttpRequest();
         xhr.open('POST','https://api.anthropic.com/v1/messages');
@@ -1519,7 +1519,7 @@ async function analyzeWoltHistory(files){
         xhr.setRequestHeader('anthropic-version','2023-06-01');
         xhr.setRequestHeader('content-type','application/json');
         xhr.setRequestHeader('anthropic-dangerous-direct-browser-access','true');
-        xhr.timeout=180000;
+        xhr.timeout=240000;
         xhr.onload=()=>res(xhr);
         xhr.onerror=()=>rej(new Error('XHR שגיאת רשת'));
         xhr.ontimeout=()=>rej(new Error('XHR פסק זמן'));
@@ -2005,9 +2005,10 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v81';
-self.addEventListener('install',e=>{self.skipWaiting();});
-self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});`;
+    const sw=`const C='hs-v82';const A=['.'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
     const blob=URL.createObjectURL(new Blob([sw],{type:'text/javascript'}));
     // Unregister stale SWs before registering new one — ensures fresh code after deployments
     navigator.serviceWorker.getRegistrations()
