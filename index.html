@@ -1508,8 +1508,10 @@ async function analyzeWoltHistory(files){
       const skusForAI=preCalcSkus.filter(s=>s.purchase_count>=3).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,150);
       console.log('[analysis] sending',skusForAI.length,'of',preCalcSkus.length,'SKUs (≥3 purchases) to AI for semantic grouping');
       const skuNames=skusForAI.map(s=>s.name);
-      const _promptTxt='Group these Hebrew grocery SKUs. Shopping-list rule: same product different brands/sizes/fat% → merge. Different products → keep separate.\nMERGE: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\nKEEP SEPARATE: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים\nCategories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\nNon-food→exclude. Every SKU in exactly one group.\nSKUs:\n'+JSON.stringify(skuNames)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","matched_skus":["חלב תנובה 3%"]}],"summary":"..."}';
+      const _promptTxt='Group these Hebrew grocery SKUs by index. Shopping-list rule: same product different brands/sizes/fat% → merge. Different products → keep separate.\nMERGE: "קוטג\' שטראוס 5%"+"קוטג\' גד 9%"→"קוטג\'"\nKEEP SEPARATE: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים\nCategories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\nNon-food→exclude. Every index in exactly one group.\nInput (0-indexed array):\n'+JSON.stringify(skuNames)+'\nReturn JSON only — use idx (array of input indices) NOT matched_skus:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","idx":[0,1,2]}],"summary":"..."}';
       if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+skusForAI.length+' פריטים ל-AI...';}
+      // Acquire wake lock to prevent screen sleep killing the connection on Android
+      let _wl=null;try{if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen');}catch(e){}
       // Use XHR instead of fetch — more reliable on Android Chrome after FileReader
       const _xhrBody=JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:8192,messages:[{role:'user',content:_promptTxt}]});
       const _xhrResp=await new Promise((res,rej)=>{
@@ -1525,6 +1527,7 @@ async function analyzeWoltHistory(files){
         xhr.ontimeout=()=>rej(new Error('XHR פסק זמן'));
         xhr.send(_xhrBody);
       });
+      if(_wl)try{_wl.release();}catch(e){}
       if(_xhrResp.status===401){S.settings.apiKey='';save();updateKeyBadge();throw new Error('__auth__');}
       if(_xhrResp.status<200||_xhrResp.status>=300){let em='Error '+_xhrResp.status;try{em=JSON.parse(_xhrResp.responseText).error?.message||em;}catch{}throw new Error(em);}
       bodyTxt=_xhrResp.responseText;
@@ -1559,16 +1562,18 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
     const result=JSON.parse(jsonStr);
     // For JSON path: AI provided groupings, JS recalculates all numbers from raw dates
     if(preCalcSkus){
-      // Fix 3: normalize keys with normN so apostrophe/whitespace variants don't cause silent drops
-      const byName={};for(const s of preCalcSkus)byName[normN(s.name)]=s;
       const EXCL=new Set(['exclude','hygiene']);
       const SVCPAT2=/wolt\+|מנוי|subscription|סיגריות/i;
       const KCATS=new Set(['baby','dairy','bread','produce','meat','frozen','snacks','drinks','pantry','cleaning','custom']);
+      // byName fallback for old matched_skus format; idx is primary
+      const byName={};for(const s of skusForAI)byName[normN(s.name)]=s;
       result.items=(result.items||[]).filter(it=>{
         const cat=it.cat||'custom';
         if(EXCL.has(cat)||!KCATS.has(cat)||SVCPAT2.test(it.name||'')){console.log('[merge-drop]',it.name,'cat:'+cat);return false;}
-        // Fix 3: normalize lookup names for robust matching
-        const matched=(it.matched_skus||[it.name]).map(n=>byName[normN(n)]).filter(Boolean);
+        // idx (index array) is primary; fall back to matched_skus name lookup
+        const matched=it.idx
+          ?(it.idx).map(i=>skusForAI[i]).filter(Boolean)
+          :(it.matched_skus||[it.name]).map(n=>byName[normN(n)]).filter(Boolean);
         if(!matched.length){console.warn('[merge] no SKU match for "'+it.name+'" — dropped');return false;}
         // Combine dates across all matched SKUs
         const allDates=[...new Set(matched.flatMap(s=>s.dates))].sort();
@@ -2005,7 +2010,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v82';const A=['.'];
+    const sw=`const C='hs-v83';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
