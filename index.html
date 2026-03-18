@@ -1467,13 +1467,20 @@ function detectUnit(name){
 }
 
 // ── Normalize a SKU name to a grouping key (strips brand/size/packaging noise)
+// NOTE: color adjectives (צהובה/לבנה/שחורה) are intentionally kept — they distinguish products
 function normalizeSkuKey(name){
   let n=name;
-  n=n.replace(/\([^)]*\)/g,'');
-  n=n.replace(/\d+[\.,]?\d*\s*(גרם|גר[׳]?|מ"ל|מ׳ל|ליטר|ל[׳]?|ק"ג|ק׳ג|יח[׳]?|אחוז)/gi,'');
-  n=n.replace(/\b\d+\.?\d*\s*%/g,'');
-  n=n.replace(/\b(שטראוס|תנובה|עלית|אסם|בטר|גד|ניסו|דנונה|נסטלה|זוגלובק|אנג[׳']ל)\b/gi,'');
+  n=n.replace(/\([^)]*\)/g,''); // remove parenthetical content
+  n=n.replace(/\d+[\.,]?\d*\s*(גרם|גר[׳]?|מ"ל|מ׳ל|ליטר|ל[׳]?|ק"ג|ק׳ג|יח[׳]?|אחוז)/gi,''); // number+unit
+  n=n.replace(/\b\d+\.?\d*\s*%/g,''); // percentages: 3%, 1.5%
+  n=n.replace(/[-–—״|,]/g,' '); // separators → space
+  n=n.replace(/\b\d+\b/g,' '); // standalone numbers (sizes/pack counts)
+  // Brands
+  n=n.replace(/\b(שטראוס|תנובה|עלית|אסם|בטר|גד|ניסו|דנונה|נסטלה|זוגלובק|אנג[׳']ל|יוטבתה|טרה|ריבס|בריוט|אחלה|חמד|נשר|סוגת|ויסוצקי|תלמה|שמיר)\b/gi,'');
+  // Size/style adjectives (NOT color adjectives)
   n=n.replace(/\b(גדול[ה]?|קטנ[ה]?|מיני|ענק|קינג|קלאסי[ת]?|רגיל[ה]?)\b/gi,'');
+  // Quality/packaging/origin stop words; also loose unit words that remain after number removal
+  n=n.replace(/\b(ללא|מהדרין|טרי|טרייה|קפוא|קפואה|אורגני|אורגנית|ישראלי|ישראלית|ישראל|מועשר|מועשרת|בפיקוח|מחיר|מפוקח|גרם|ליטר|מארז|אריזה|חבילה|יחידות|יחידה|גביע|בגביע|בקבוק|קרטון)\b/gi,'');
   return n.replace(/\s+/g,' ').trim();
 }
 
@@ -1586,21 +1593,19 @@ async function analyzeWoltHistory(files){
       groupsForAI=allGroups.filter(g=>g.purchase_count>=2).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,150);
       console.log('[analysis]',preCalcSkus.length,'SKUs →',allGroups.length,'normalized groups →',groupsForAI.length,'(≥2) sent to AI');
       const aiInput=groupsForAI.map(g=>({key:g.normKey,skus:g.skus,unit:g.detected_unit}));
-      const _promptTxt='Group Hebrew grocery items into pantry staples. Input is pre-grouped by normalized key.\n'+
-'Each input group may contain variant SKU names (same product, different brand/size/fat%).\n'+
-'Merge groups only if they represent ONE shopping-list item:\n'+
-'- All bread roll types (המבורגר/ארוכות/שיפון/כוס/דגן) → always merge → "לחמניות"\n'+
-'- Flavor/variety variants of same product line: "גמדים ארוחת בוקר"+"גמדים סקוויז"→"גמדים"\n'+
-'Keep separate: גבינה צהובה≠קוטג\'; חלב≠משקה שקדים; לחם פרוס≠חלה\n'+
+      const _promptTxt='Categorize Hebrew grocery items for a family pantry list.\n'+
+'JS has already grouped SKU variants — DO NOT merge or split groups.\n'+
+'For each input group, output exactly one item with the same "key" echoed back.\n'+
 'Categories: baby,dairy,bread,produce,meat,frozen,snacks,drinks,pantry,cleaning,custom,exclude\n'+
-'Non-food→exclude. Every group index in exactly one output item.\n'+
-'UNIT: use provided unit hint. Override only if clearly wrong:\n'+
-'- Milk/juice cartons: unit="קרטון"\n'+
-'- Loose produce or meat by weight: unit="ק\\"ג"\n'+
-'- Deli/fresh cheese sold at counter (גבינה צהובה/לבנה/בולגרית, קשקבל, פטה): unit="ק\\"ג"\n'+
+'Non-food → exclude. Output one item per input group, no exceptions.\n'+
+'"name": short common Hebrew name. Keep color adjectives (צהובה/לבנה) — they distinguish products.\n'+
+'UNIT: use provided hint; override only if clearly wrong:\n'+
+'- Milk/juice carton: unit="קרטון"\n'+
+'- Loose produce/meat by weight: unit="ק\\"ג"\n'+
+'- Deli cheese at counter (גבינה צהובה/לבנה/בולגרית, קשקבל, פטה): unit="ק\\"ג"\n'+
 '- Packaged goods (cup, can, bag, box, bottle): unit="יח\'"\n'+
 '- NEVER use "גר" as unit\n'+
-'Input (0-indexed groups):\n'+JSON.stringify(aiInput)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","idx":[0]}],"summary":"..."}';
+'Input groups:\n'+JSON.stringify(aiInput)+'\nReturn JSON only:\n{"items":[{"key":"חלב","name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון"}],"summary":"..."}';
       if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+groupsForAI.length+' קבוצות ל-AI...';}
       // Acquire wake lock to prevent screen sleep killing the connection on Android
       let _wl=null;try{if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen');}catch(e){}
@@ -1657,40 +1662,37 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
       const EXCL=new Set(['exclude','hygiene']);
       const SVCPAT2=/wolt\+|מנוי|subscription|סיגריות/i;
       const KCATS=new Set(['baby','dairy','bread','produce','meat','frozen','snacks','drinks','pantry','cleaning','custom']);
-      // byNormKey fallback when AI omits idx
+      // Build key→group lookup; AI echoes key back in each output item
       const byNormKey={};for(const g of groupsForAI)byNormKey[g.normKey]=g;
       result.items=(result.items||[]).filter(it=>{
         const cat=it.cat||'custom';
-        if(EXCL.has(cat)||!KCATS.has(cat)||SVCPAT2.test(it.name||'')){console.log('[merge-drop]',it.name,'cat:'+cat);return false;}
-        // idx references group indices; fall back to normKey lookup
-        const matched=it.idx
-          ?(it.idx).map(i=>groupsForAI[Math.floor(Number(i))]).filter(Boolean)
-          :[byNormKey[normalizeSkuKey(it.name||'')]].filter(Boolean);
-        if(!matched.length){console.warn('[merge] no group match for "'+it.name+'" — dropped');return false;}
-        // Combine dates across all matched groups
-        const allDates=[...new Set(matched.flatMap(g=>g.dates))].sort();
+        if(EXCL.has(cat)||!KCATS.has(cat)||SVCPAT2.test(it.name||'')){console.log('[drop]',it.name,'cat:'+cat);return false;}
+        // Key-based lookup: AI echoes the group normKey, fallback to name normalization
+        const grp=byNormKey[it.key]||byNormKey[normalizeSkuKey(it.name||'')];
+        if(!grp){console.warn('[drop] no group match for "'+it.name+'" key:"'+it.key+'" — dropped');return false;}
+        const allDates=[...new Set(grp.dates)].sort();
         const count=allDates.length;
-        if(count<2){console.log('[merge-drop]',it.name,'merged count:'+count,'<2');return false;}
+        if(count<2){console.log('[drop]',it.name,'count:'+count,'<2');return false;}
         const ts=allDates.map(d=>new Date(d).getTime());
         const intervals=[];
         for(let i=1;i<ts.length;i++)intervals.push((ts[i]-ts[i-1])/86400000);
         const medInt=median(intervals);
         const clean=intervals.filter(iv=>iv<=medInt*3);
         const avg=Math.round(median(clean.length?clean:intervals)*10)/10;
-        if(avg>90){console.log('[merge-drop]',it.name,'avg:'+avg+'d','>90');return false;}
+        if(avg>90){console.log('[drop]',it.name,'avg:'+avg+'d','>90');return false;}
         it.purchase_count=count;
         it.avg_order_interval_days=avg;
         it.span_days=Math.round((ts[ts.length-1]-ts[0])/86400000);
         it.last_purchase=allDates[allDates.length-1];
-        const allQtys=matched.flatMap(g=>g.qtys||[]);
+        const allQtys=grp.qtys||[];
         it.typical_qty=Math.max(1,Math.round(median(allQtys.length?allQtys:[1])));
         // Use detected_unit as fallback; always reject גר
         if(!it.unit||it.unit==='גר'||it.unit==='גרם'||it.unit==='gr'||it.unit==='g')
-          it.unit=matched[0]?.detected_unit||"יח'";
-        console.log('[merge-pass]',it.name,'groups:'+matched.length,'count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty,'unit:'+it.unit);
+          it.unit=grp.detected_unit||'יח׳';
+        console.log('[pass]',it.name,'key:"'+(it.key||'?')+'"','count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty,'unit:'+it.unit);
         return true;
       });
-      console.log('[merge] kept',result.items.length,'items');
+      console.log('[filter] kept',result.items.length,'items');
     }
     S.analysisRecs=result;save();
     advWiz(2);
@@ -2103,7 +2105,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v90';const A=['.'];
+    const sw=`const C='hs-v91';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
