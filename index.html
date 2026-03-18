@@ -390,19 +390,16 @@ function freqBucket(days){
   if(d<38)return 30;
   return 45;
 }
-// Minimum sensible ordering frequency per category (non-perishables can be stocked up)
-const MIN_FREQ_CAT={snacks:21,pantry:30,cleaning:30,frozen:14,drinks:14,baby:14,custom:14};
-// Returns optimized frequency: for non-perishables, rounds UP to avoid weekly over-ordering
-// Also returns adjusted qty so the total volume per period stays the same
+// Perishables follow actual purchase frequency; non-perishables are bumped to min monthly
+const PERISHABLE_CATS=new Set(['dairy','produce','meat','bread']);
 function optimizedFreq(avgDays,cat){
   const raw=freqBucket(avgDays);
-  const min=MIN_FREQ_CAT[cat];
-  return(min&&raw<min)?min:raw;
+  return PERISHABLE_CATS.has(cat)?raw:Math.max(raw,30);
 }
 function optimizedQty(typicalQty,avgDays,cat){
   const raw=freqBucket(avgDays);
   const opt=optimizedFreq(avgDays,cat);
-  return opt>raw?Math.max(1,Math.ceil((typicalQty||1)*opt/raw)):(typicalQty||1);
+  return Math.max(1,Math.ceil((typicalQty||1)*opt/raw));
 }
 // Returns true if today falls within the given season (Israel climate)
 function isInSeason(seasonCat){
@@ -2113,7 +2110,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v93';const A=['.'];
+    const sw=`const C='hs-v94';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
