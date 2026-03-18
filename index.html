@@ -1602,7 +1602,7 @@ async function analyzeWoltHistory(files){
 '- Deli cheese at counter (גבינה צהובה/לבנה/בולגרית, קשקבל, פטה): unit="ק\\"ג"\n'+
 '- Packaged goods (cup, can, bag, box, bottle): unit="יח\'"\n'+
 '- NEVER use "גר" as unit\n'+
-'Input groups:\n'+JSON.stringify(aiInput)+'\nReturn JSON only:\n{"items":[{"key":"חלב","name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון"}],"summary":"..."}';
+'Input groups (0-indexed):\n'+JSON.stringify(aiInput)+'\nReturn JSON only:\n{"items":[{"idx":0,"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון"}],"summary":"..."}';
       if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+groupsForAI.length+' קבוצות ל-AI...';}
       // Acquire wake lock to prevent screen sleep killing the connection on Android
       let _wl=null;try{if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen');}catch(e){}
@@ -1659,14 +1659,14 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
       const EXCL=new Set(['exclude','hygiene']);
       const SVCPAT2=/wolt\+|מנוי|subscription|סיגריות/i;
       const KCATS=new Set(['baby','dairy','bread','produce','meat','frozen','snacks','drinks','pantry','cleaning','custom']);
-      // Build key→group lookup; AI echoes key back in each output item
+      // Build key→group lookup for fallback when idx missing/invalid
       const byNormKey={};for(const g of groupsForAI)byNormKey[g.normKey]=g;
       result.items=(result.items||[]).filter(it=>{
         const cat=it.cat||'custom';
         if(EXCL.has(cat)||!KCATS.has(cat)||SVCPAT2.test(it.name||'')){console.log('[drop]',it.name,'cat:'+cat);return false;}
-        // Key-based lookup: AI echoes the group normKey, fallback to name normalization
-        const grp=byNormKey[it.key]||byNormKey[normalizeSkuKey(it.name||'')];
-        if(!grp){console.warn('[drop] no group match for "'+it.name+'" key:"'+it.key+'" — dropped');return false;}
+        // idx-based lookup (compact output); fallback to normKey name lookup
+        const grp=(it.idx!=null?groupsForAI[Math.floor(Number(it.idx))]:null)||byNormKey[normalizeSkuKey(it.name||'')];
+        if(!grp){console.warn('[drop] no group match for "'+it.name+'" idx:'+(it.idx??'?')+' — dropped');return false;}
         const allDates=[...new Set(grp.dates)].sort();
         const count=allDates.length;
         if(count<2){console.log('[drop]',it.name,'count:'+count,'<2');return false;}
@@ -1686,7 +1686,7 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
         // Use detected_unit as fallback; always reject גר
         if(!it.unit||it.unit==='גר'||it.unit==='גרם'||it.unit==='gr'||it.unit==='g')
           it.unit=grp.detected_unit||'יח׳';
-        console.log('[pass]',it.name,'key:"'+(it.key||'?')+'"','count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty,'unit:'+it.unit);
+        console.log('[pass]',it.name,'idx:'+(it.idx??'?'),'count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty,'unit:'+it.unit);
         return true;
       });
       console.log('[filter] kept',result.items.length,'items');
@@ -2110,7 +2110,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v94';const A=['.'];
+    const sw=`const C='hs-v95';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
