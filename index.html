@@ -1830,10 +1830,10 @@ function checkNewItems(tripItems){
 }
 // Minimum days absent before suggesting removal, per frequency bucket
 function minRemovalDays(f){
-  if(f<=14)return 21;   // weekly → 3 weeks
-  if(f<=30)return 42;   // bi-weekly → 6 weeks
-  if(f<=42)return 90;   // monthly → 3 months
-  return 180;            // bi-monthly → 6 months
+  if(f<=14)return 21;   // שבועי/דו-שבועי → 3 שבועות
+  if(f<=21)return 42;   // כל 3 שבועות → 6 שבועות
+  if(f<=30)return 90;   // חודשי → 3 חודשים
+  return 180;            // דו-חודשי → 6 חודשים
 }
 function checkRemovals(){
   if(!S.purchaseLog||!S.purchaseLog.length)return;
@@ -2105,7 +2105,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v91';const A=['.'];
+    const sw=`const C='hs-v92';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
