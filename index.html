@@ -390,6 +390,20 @@ function freqBucket(days){
   if(d<38)return 30;
   return 45;
 }
+// Minimum sensible ordering frequency per category (non-perishables can be stocked up)
+const MIN_FREQ_CAT={snacks:21,pantry:30,cleaning:30,frozen:14,drinks:14,baby:14,custom:14};
+// Returns optimized frequency: for non-perishables, rounds UP to avoid weekly over-ordering
+// Also returns adjusted qty so the total volume per period stays the same
+function optimizedFreq(avgDays,cat){
+  const raw=freqBucket(avgDays);
+  const min=MIN_FREQ_CAT[cat];
+  return(min&&raw<min)?min:raw;
+}
+function optimizedQty(typicalQty,avgDays,cat){
+  const raw=freqBucket(avgDays);
+  const opt=optimizedFreq(avgDays,cat);
+  return opt>raw?Math.max(1,Math.ceil((typicalQty||1)*opt/raw)):(typicalQty||1);
+}
 // Returns true if today falls within the given season (Israel climate)
 function isInSeason(seasonCat){
   if(!seasonCat||seasonCat==='כל השנה')return true;
@@ -669,8 +683,8 @@ function renderShop(){
   }
   const FREQ_SECS=[
     {max:14, lbl:'📅 שבועי'},
-    {max:30, lbl:'🗓️ דו-שבועי'},
-    {max:42, lbl:'📆 חודשי'},
+    {max:21, lbl:'🗓️ דו-שבועי'},
+    {max:35, lbl:'📆 חודשי'},
     {max:Infinity, lbl:'🗃️ דו-חודשי'},
   ];
   FREQ_SECS.forEach((sec,i)=>{
@@ -715,8 +729,8 @@ function renderStaples(){
   // Group by frequency bucket, sorted most-frequent first
   const FREQ_SECS=[
     {max:14, lbl:'📅 שבועי'},
-    {max:30, lbl:'🗓️ דו-שבועי'},
-    {max:42, lbl:'📆 חודשי'},
+    {max:21, lbl:'🗓️ דו-שבועי'},
+    {max:35, lbl:'📆 חודשי'},
     {max:Infinity, lbl:'🗃️ דו-חודשי'},
   ];
   FREQ_SECS.forEach(sec=>{
@@ -1108,23 +1122,24 @@ function renderWizardStep(){
         <div class="wiz-sub">הגדרנו ${S.staples.length} פריטים לשמור בבית תמיד.</div>
         <button class="btn pri full" onclick="advWiz(4)">הבא →</button>`;
     } else {
-      // Client-side threshold filter: ≥3 purchases, avg interval ≤90 days, food/cleaning only
+      // Client-side threshold filter: ≥2 purchases, avg interval ≤90 days, food/cleaning only
       const KNOWN_CATS=new Set(['baby','dairy','bread','produce','meat','frozen','snacks','drinks','pantry','cleaning','custom']);
       const SVCPAT=/wolt\+|מנוי|subscription|סיגריות/i;
       const filtered=recs.items.filter(it=>{
         const count=it.purchase_count||0;
         const avg=it.avg_order_interval_days||999;
-        if(count<3||avg>90){console.log('[filter-out]',it.name,'count:'+count,'avg:'+avg,'reason: threshold');return false;}
+        if(count<2||avg>90){console.log('[filter-out]',it.name,'count:'+count,'avg:'+avg,'reason: threshold');return false;}
         if(it.cat==='hygiene'||!KNOWN_CATS.has(it.cat)){console.log('[filter-out]',it.name,'cat:'+it.cat,'reason: category');return false;}
         if(SVCPAT.test(it.name||'')){console.log('[filter-out]',it.name,'reason: blacklist');return false;}
-        console.log('[filter-pass]',it.name,'count:'+count,'avg:'+avg,'→ bucket:'+freqBucket(avg));
+        console.log('[filter-pass]',it.name,'count:'+count,'avg:'+avg,'→ bucket:'+optimizedFreq(avg,it.cat||'custom'));
         return true;
       });
       console.log('[filter] kept',filtered.length,'of',recs.items.length,'items');
       const itemsH=filtered.map(it=>{
         const cat=it.cat||'custom';
         const avg=Math.round(it.avg_order_interval_days||7);
-        const bucket=freqBucket(avg);
+        const bucket=optimizedFreq(avg,cat);
+        const qty=optimizedQty(it.typical_qty,avg,cat);
         const ico=it.emoji
           ?`<div class="cat-ico" style="width:38px;height:38px;background:${(CS[cat]||CS.custom).bg};font-size:20px">${it.emoji}</div>`
           :catIco(cat,38);
@@ -1140,7 +1155,7 @@ function renderWizardStep(){
           ${ico}
           <div class="i-info">
             <div class="i-name">${esc(it.name)}</div>
-            <div class="i-meta">${it.purchase_count} פעמים · ממוצע כל ${avg} ימים · ${it.typical_qty||1} ${it.unit||'יח׳'}</div>
+            <div class="i-meta">${it.purchase_count} פעמים · ממוצע כל ${avg} ימים · ${qty} ${it.unit||'יח׳'}</div>
             <select class="freq-sel" onclick="event.stopPropagation()" style="margin-top:5px;font-size:16px;padding:3px 6px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt)">${itemFreqOpts}</select>
             ${seasonH}
           </div>
@@ -1149,7 +1164,7 @@ function renderWizardStep(){
       }).join('');
       inner=`<div class="wiz-ttl" style="text-align:right">ניתוח הזמנות — ${filtered.length} פריטים</div>
         <div class="wiz-sub" style="text-align:right;margin-bottom:12px">בדוק תדירות לכל פריט ואשר:</div>
-        <div class="card" style="margin-bottom:14px">${itemsH||'<div style="padding:16px;color:var(--muted);text-align:center">אין פריטים שעמדו במינימום (3 רכישות)</div>'}</div>
+        <div class="card" style="margin-bottom:14px">${itemsH||'<div style="padding:16px;color:var(--muted);text-align:center">אין פריטים שעמדו במינימום (2 רכישות)</div>'}</div>
         ${recs.summary?`<div style="font-size:13px;color:var(--txt2);background:var(--mint);border-radius:var(--r2);padding:12px;margin-bottom:14px;line-height:1.5">💡 ${esc(recs.summary)}</div>`:''}
         <button class="btn pri full" onclick="applyRecs()">הוסף פריטים נבחרים ✓</button>
         <button class="btn ghost full" style="margin-top:6px" onclick="advWiz(4)">דלג</button>
@@ -1207,11 +1222,12 @@ function applyRecs(){
     const it=recs.items.find(x=>x.name===name);
     if(!it)return;
     const selEl=el.querySelector('.freq-sel');
-    const bucket=selEl?parseInt(selEl.value):freqBucket(it.avg_order_interval_days||7);
+    const bucket=selEl?parseInt(selEl.value):optimizedFreq(it.avg_order_interval_days||7,it.cat||'custom');
     const seasonEl=el.querySelector('.season-sel');
     const seasonCat=seasonEl?seasonEl.value:'כל השנה';
     if(!S.staples.find(s=>normN(s.n)===normN(name))){
-      addStaple(name,it.cat||'custom',it.emoji||CS[it.cat||'custom']?.e,String(it.typical_qty||1),it.unit||'יח׳',bucket,false,seasonCat);
+      const qty=String(optimizedQty(it.typical_qty,it.avg_order_interval_days||7,it.cat||'custom'));
+      addStaple(name,it.cat||'custom',it.emoji||CS[it.cat||'custom']?.e,qty,it.unit||'יח׳',bucket,false,seasonCat);
       added++;
     }
   });
@@ -1443,8 +1459,10 @@ function median(arr){
 
 // ── Detect purchase unit from product name (used as hint to AI)
 function detectUnit(name){
-  if(/ק"ג|ק׳ג|ק\"ג|\bקג\b/i.test(name))return 'ק"ג';
+  if(/ק"ג|ק׳ג|ק\"ג|\bקג\b/i.test(name))return 'ק״ג';
   if(/^(חלב|שמנת)\b/i.test(name))return 'קרטון';
+  // Deli/fresh cheese sold by weight at the counter
+  if(/^גבינ[הא]\b|^לבנה\b|^קשקבל\b|^פטה\b|^בולגרי/i.test(name))return 'ק״ג';
   return 'יח׳';
 }
 
@@ -1579,6 +1597,7 @@ async function analyzeWoltHistory(files){
 'UNIT: use provided unit hint. Override only if clearly wrong:\n'+
 '- Milk/juice cartons: unit="קרטון"\n'+
 '- Loose produce or meat by weight: unit="ק\\"ג"\n'+
+'- Deli/fresh cheese sold at counter (גבינה צהובה/לבנה/בולגרית, קשקבל, פטה): unit="ק\\"ג"\n'+
 '- Packaged goods (cup, can, bag, box, bottle): unit="יח\'"\n'+
 '- NEVER use "גר" as unit\n'+
 'Input (0-indexed groups):\n'+JSON.stringify(aiInput)+'\nReturn JSON only:\n{"items":[{"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון","idx":[0]}],"summary":"..."}';
@@ -1651,7 +1670,7 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
         // Combine dates across all matched groups
         const allDates=[...new Set(matched.flatMap(g=>g.dates))].sort();
         const count=allDates.length;
-        if(count<3){console.log('[merge-drop]',it.name,'merged count:'+count,'<3');return false;}
+        if(count<2){console.log('[merge-drop]',it.name,'merged count:'+count,'<2');return false;}
         const ts=allDates.map(d=>new Date(d).getTime());
         const intervals=[];
         for(let i=1;i<ts.length;i++)intervals.push((ts[i]-ts[i-1])/86400000);
@@ -2084,7 +2103,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v89';const A=['.'];
+    const sw=`const C='hs-v90';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
