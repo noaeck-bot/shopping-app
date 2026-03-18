@@ -1821,10 +1821,14 @@ function checkNewItems(tripItems){
       const clean=intervals.filter(iv=>iv<=medInt*3);
       avg=Math.round(median(clean.length?clean:intervals));
     }
-    const avgQty=Math.max(1,Math.round(events.reduce((s,e)=>s+e.qty,0)/count));
+    const avgQty=Math.max(1,Math.round(median(events.map(e=>e.qty))));
     const stddev=computeStddev(dates);
     const thresh=meetsThreshold(count,avg,stddev);
     if(!thresh.ok&&!thresh.flagged)return;
+    // Freshness gate: pattern must be recent, not just historical
+    const dynDays=Math.max(90,avg*4);
+    const recentCount=events.filter(e=>e.date>=Date.now()-dynDays*86400000).length;
+    if(recentCount<3)return;
     S.pendingSuggestions.push({type:'add',name:it.name,count,avg,span,avgQty,flagged:thresh.flagged});
   });
 }
@@ -1901,10 +1905,14 @@ function showNextSuggestion(){
 function acceptAddSug(){
   const sug=S.pendingSuggestions?.[0];if(!sug||sug.type!=='add')return;
   const sel=document.getElementById('sug-freq');
-  const bucket=sel?parseInt(sel.value):freqBucket(sug.avg);
   const cat=document.getElementById('sug-cat')?.value||'custom';
-  const qty=String(sug.avgQty||1);
-  addStaple(sug.name,cat,CS[cat]?.e,qty,'יח׳',bucket,true);
+  const rawBucket=freqBucket(sug.avg);
+  const selBucket=sel?parseInt(sel.value):rawBucket;
+  // If user kept the default freq, apply category-based optimization (same as Phase 1)
+  const bucket=selBucket===rawBucket?optimizedFreq(sug.avg,cat):selBucket;
+  const qty=String(optimizedQty(sug.avgQty||1,sug.avg,cat));
+  const unit=detectUnit(sug.name);
+  addStaple(sug.name,cat,CS[cat]?.e,qty,unit,bucket,true);
   S.pendingSuggestions.shift();save();closeModal();render();
   toast(`${esc(sug.name)} נוסף לרשימה ${freqLbl(bucket)} ✓`,'pri');
   setTimeout(showNextSuggestion,350);
@@ -2105,7 +2113,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v92';const A=['.'];
+    const sw=`const C='hs-v93';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
