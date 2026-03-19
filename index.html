@@ -1110,7 +1110,9 @@ function renderWizardStep(){
       <div style="display:flex;gap:9px;margin-top:16px">
         <button class="btn out" style="flex:1" onclick="advWiz(2)">דלג →</button>
         <button class="btn pri" style="flex:1;opacity:.5" id="wiz-analyze" disabled onclick="runWizAnalyze()">✨ נתח</button>
-      </div>`;
+      </div>
+      ${S.woltPreCalc&&S.woltPreCalc.length?`<button class="btn ghost full" style="margin-top:8px;font-size:13px" onclick="retryWoltAnalyze()">↻ נסה שוב (${S.woltPreCalc.length} פריטים שמורים — ללא העלאה חוזרת)</button>`:''}
+      `;
   } else if(step===2){
     const recs=S.analysisRecs;
     if(!recs||!recs.items?.length){
@@ -1232,6 +1234,11 @@ function applyRecs(){
   advWiz(4);
 }
 function runWizAnalyze(){analyzeWoltHistory(_wizFiles);}
+function retryWoltAnalyze(){
+  if(!S.woltPreCalc||!S.woltPreCalc.length){toast('אין נתונים שמורים — נא להעלות קובץ','dan');return;}
+  if(!S.settings.apiKey){requireApiKey(retryWoltAnalyze);return;}
+  analyzeWoltHistory(null,S.woltPreCalc);
+}
 
 // ══════════════════════════════════════════
 // POST-SHOPPING (PHASE 2)
@@ -1551,11 +1558,11 @@ function preCalcWoltStats(jsonTexts){
 // ── Analyze Wolt history (Phase 1 wizard)
 // JSON path: Pass 1 JS groups SKUs by normalized key → Pass 2 AI names/categorises only
 // PDF/image fallback: AI does full extraction (less reliable math)
-async function analyzeWoltHistory(files){
-  if(!files||!files.length){toast('נא לבחור קבצים','dan');return;}
+async function analyzeWoltHistory(files, preCalcData=null){
+  if(!preCalcData&&(!files||!files.length)){toast('נא לבחור קבצים','dan');return;}
   if(!S.settings.apiKey){
     closeWizard();
-    requireApiKey(()=>{openWizard();analyzeWoltHistory(files);});
+    requireApiKey(()=>{openWizard();analyzeWoltHistory(files,preCalcData);});
     return;
   }
   const btn=document.getElementById('wiz-analyze');
@@ -1563,33 +1570,36 @@ async function analyzeWoltHistory(files){
   if(btn){btn.disabled=true;btn.textContent='מנתח...';}
   if(errDiv)errDiv.style.display='none';
   try{
-    // Separate JSON files from PDF/image files
+    // Separate JSON files from PDF/image files (skipped when retrying with stored pre-calc data)
     const jsonTexts=[];const mediaImgs=[];
-    await Promise.all(Array.from(files).map(f=>new Promise((res,rej)=>{
-      const r=new FileReader();
-      const isJson=f.type==='application/json'||f.name.endsWith('.json');
-      r.onload=e=>{
-        if(isJson){jsonTexts.push(e.target.result);res();return;}
-        const d=e.target.result.split(',')[1];
-        mediaImgs.push(f.type==='application/pdf'
-          ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:d}}
-          :{type:'image',source:{type:'base64',media_type:f.type.startsWith('image/')?f.type:'image/jpeg',data:d}});
-        res();
-      };
-      r.onerror=rej;
-      if(isJson)r.readAsText(f);else r.readAsDataURL(f);
-    })));
+    if(!preCalcData){
+      await Promise.all(Array.from(files).map(f=>new Promise((res,rej)=>{
+        const r=new FileReader();
+        const isJson=f.type==='application/json'||f.name.endsWith('.json');
+        r.onload=e=>{
+          if(isJson){jsonTexts.push(e.target.result);res();return;}
+          const d=e.target.result.split(',')[1];
+          mediaImgs.push(f.type==='application/pdf'
+            ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:d}}
+            :{type:'image',source:{type:'base64',media_type:f.type.startsWith('image/')?f.type:'image/jpeg',data:d}});
+          res();
+        };
+        r.onerror=rej;
+        if(isJson)r.readAsText(f);else r.readAsDataURL(f);
+      })));
+    }
 
     let resp,preCalcSkus=null,bodyTxt=null,groupsForAI=null;
 
-    if(jsonTexts.length){
+    if(preCalcData||jsonTexts.length){
       // ── JSON path: JS groups SKUs by normalized key, AI names/categorises groups ──
-      preCalcSkus=preCalcWoltStats(jsonTexts);
+      preCalcSkus=preCalcData||preCalcWoltStats(jsonTexts);
       if(!preCalcSkus.length)throw new Error('לא נמצאו פריטים בקובץ. בדוק שהקובץ הוא ייצוא הזמנות Wolt תקין.');
+      if(!preCalcData){S.woltPreCalc=preCalcSkus;save();} // store for retry without re-upload
       const allGroups=groupSkusByNormKey(preCalcSkus);
       groupsForAI=allGroups.filter(g=>g.purchase_count>=2).sort((a,b)=>b.purchase_count-a.purchase_count).slice(0,150);
       console.log('[analysis]',preCalcSkus.length,'SKUs →',allGroups.length,'normalized groups →',groupsForAI.length,'(≥2) sent to AI');
-      const aiInput=groupsForAI.map(g=>({key:g.normKey,skus:g.skus,unit:g.detected_unit}));
+      const aiInput=groupsForAI.map(g=>({key:g.normKey,unit:g.detected_unit})); // no skus — reduces input tokens
       const _promptTxt='Categorize Hebrew grocery items for a family pantry list.\n'+
 'JS has already grouped SKU variants — DO NOT merge or split groups.\n'+
 'For each input group, output exactly one item with the same "key" echoed back.\n'+
@@ -1602,12 +1612,12 @@ async function analyzeWoltHistory(files){
 '- Deli cheese at counter (גבינה צהובה/לבנה/בולגרית, קשקבל, פטה): unit="ק\\"ג"\n'+
 '- Packaged goods (cup, can, bag, box, bottle): unit="יח\'"\n'+
 '- NEVER use "גר" as unit\n'+
-'Input groups (0-indexed):\n'+JSON.stringify(aiInput)+'\nReturn JSON only:\n{"items":[{"idx":0,"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון"}],"summary":"..."}';
+'Input groups (0-indexed):\n'+JSON.stringify(aiInput)+'\nReturn JSON only (summary: one short Hebrew sentence):\n{"items":[{"idx":0,"name":"חלב","cat":"dairy","emoji":"🥛","unit":"קרטון"}],"summary":"..."}';
       if(errDiv){errDiv.style.display='block';errDiv.textContent='שולח '+groupsForAI.length+' קבוצות ל-AI...';}
       // Acquire wake lock to prevent screen sleep killing the connection on Android
       let _wl=null;try{if('wakeLock' in navigator)_wl=await navigator.wakeLock.request('screen');}catch(e){}
       // Use XHR instead of fetch — more reliable on Android Chrome after FileReader
-      const _xhrBody=JSON.stringify({model:'claude-opus-4-6',max_tokens:8192,messages:[{role:'user',content:_promptTxt}]});
+      const _xhrBody=JSON.stringify({model:'claude-opus-4-6',max_tokens:16000,messages:[{role:'user',content:_promptTxt}]});
       const _xhrResp=await new Promise((res,rej)=>{
         const xhr=new XMLHttpRequest();
         xhr.open('POST','https://api.anthropic.com/v1/messages');
@@ -2110,7 +2120,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v95';const A=['.'];
+    const sw=`const C='hs-v96';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
