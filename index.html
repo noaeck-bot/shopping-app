@@ -12,10 +12,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --g1:#1A7C4A; --g2:#2AA65F; --g3:#52C97A; --mint:#E6F7EE;
+  --g1:#4F8A6D; --g2:#3F735A; --g3:#6BA88A; --mint:#E8F3EE;
   --red:#EF4444; --reds:#FEF2F2; --ora:#F97316; --oras:#FFF7ED;
-  --bg:#F7F8FA; --card:#fff; --txt:#18181B; --txt2:#52525B; --muted:#A1A1AA;
-  --bdr:#E4E4E7; --div:#F4F4F5;
+  --amber:#F59E0B; --ambers:#FFFBEB;
+  --bg:#F8FAF8; --card:#fff; --txt:#1F2937; --txt2:#6B7280; --muted:#9CA3AF;
+  --bdr:#E5E7EB; --div:#F3F4F6;
   --sh:0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.05);
   --sh2:0 8px 32px rgba(0,0,0,.12);
   --r:18px; --r2:12px; --r3:8px;
@@ -70,7 +71,7 @@ input,select,textarea{font-family:inherit}
 .fab{position:fixed;left:18px;bottom:calc(var(--nav) + var(--sb) + 16px);
   width:56px;height:56px;border-radius:50%;background:var(--g1);color:#fff;
   font-size:28px;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px rgba(26,124,74,.5);z-index:190;transition:all .2s;line-height:1}
+  box-shadow:0 4px 20px rgba(79,138,109,.4);z-index:190;transition:all .2s;line-height:1}
 .fab:active{transform:scale(.91)}
 
 /* ── CARDS ── */
@@ -1093,23 +1094,29 @@ function renderWizardStep(){
     inner=`<div class="wiz-ico">👋</div>
       <div class="wiz-ttl">ברוכים הבאים לקניות בית!</div>
       <div class="wiz-sub">האפליקציה עוזרת לנהל קניות משפחתיות בחכמה.<br>בואו נגדיר יחד תוך 3 דקות.</div>
-      <button class="btn pri full" onclick="advWiz(1)">בואו נתחיל! →</button>
-      <button class="btn ghost full" style="margin-top:8px" onclick="wizSkip()">דלג על ההגדרה</button>`;
+      <button class="btn pri full" onclick="advWiz(1)">נתחיל</button>
+      <button class="btn ghost full" style="margin-top:8px" onclick="wizSkip()">אחר כך</button>`;
   } else if(step===1){
-    inner=`<div class="wiz-ico">📦</div>
-      <div class="wiz-ttl">ייבוא היסטוריית Wolt</div>
-      <div class="wiz-sub">העלה צילומי מסך של הזמנות Wolt אחרונות — AI ינתח מה אתם קונים ויציע מאגר מותאם אישית.</div>
+    inner=`<div style="text-align:center;margin:10px 0 16px">
+        <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="11" y="26" width="50" height="36" rx="8" fill="var(--mint)" stroke="var(--g1)" stroke-width="2.5"/>
+          <path d="M26 26C26 17.5 30 13 36 13C42 13 46 17.5 46 26" stroke="var(--g1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <line x1="21" y1="44" x2="51" y2="44" stroke="var(--g1)" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+          <line x1="21" y1="53" x2="43" y2="53" stroke="var(--g1)" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+        </svg>
+      </div>
+      <div class="wiz-ttl">נתחיל מהקניות שכבר עשיתם</div>
+      <div class="wiz-sub">העלו קבצים מהקניות האחרונות כדי שנבנה בסיס חכם לרשימות הבאות</div>
       <div class="upload-area" id="wiz-uarea">
         <input type="file" id="wiz-files" accept="image/*,.pdf,application/pdf,.json,application/json" multiple>
-        <div style="font-size:40px;margin-bottom:8px">📱</div>
-        <div style="font-size:15px;font-weight:700;margin-bottom:4px">לחץ לבחירת קבצים</div>
-        <div style="font-size:13px;color:var(--muted)">תמונות או PDF — Wolt, קבלות, רשימות</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px;color:var(--txt)">לחצו לבחירת קבצים</div>
+        <div style="font-size:13px;color:var(--muted)">חשבוניות, PDF או קבצים מהזמנות קודמות</div>
       </div>
       <div id="wiz-fprev" class="fchips" style="margin-top:8px"></div>
       <div id="wiz-err" style="display:none;margin-top:12px;padding:12px 14px;background:var(--reds);color:var(--red);border-radius:var(--r2);font-size:13px;font-weight:600;line-height:1.5"></div>
       <div style="display:flex;gap:9px;margin-top:16px">
-        <button class="btn out" style="flex:1" onclick="advWiz(2)">דלג →</button>
-        <button class="btn pri" style="flex:1;opacity:.5" id="wiz-analyze" disabled onclick="runWizAnalyze()">✨ נתח</button>
+        <button class="btn out" style="flex:1" onclick="advWiz(2)">אחר כך</button>
+        <button class="btn pri" style="flex:1;opacity:.5" id="wiz-analyze" disabled onclick="runWizAnalyze()">התחל</button>
       </div>
       ${S.woltPreCalc&&S.woltPreCalc.length?`<button class="btn ghost full" style="margin-top:8px;font-size:13px" onclick="retryWoltAnalyze()">↻ נסה שוב (${S.woltPreCalc.length} פריטים שמורים — ללא העלאה חוזרת)</button>`:''}
       `;
@@ -1166,8 +1173,8 @@ function renderWizardStep(){
         <div class="card" style="margin-bottom:14px">${itemsH||'<div style="padding:16px;color:var(--muted);text-align:center">אין פריטים שעמדו במינימום (2 רכישות)</div>'}</div>
         ${recs.summary?`<div style="font-size:13px;color:var(--txt2);background:var(--mint);border-radius:var(--r2);padding:12px;margin-bottom:14px;line-height:1.5">💡 ${esc(recs.summary)}</div>`:''}
         <button class="btn pri full" onclick="applyRecs()">הוסף פריטים נבחרים ✓</button>
-        <button class="btn ghost full" style="margin-top:6px" onclick="advWiz(4)">דלג</button>
-        <button class="btn ghost full" style="margin-top:6px;font-size:13px" onclick="advWiz(1)">← נתח מחדש</button>`;
+        <button class="btn ghost full" style="margin-top:6px" onclick="advWiz(4)">אחר כך</button>
+        <button class="btn ghost full" style="margin-top:6px;font-size:13px" onclick="advWiz(1)">נתח מחדש</button>`;
     }
   } else if(step===4){
     inner=`<div class="wiz-ico">🎉</div>
@@ -1878,7 +1885,7 @@ function showNextSuggestion(){
     const bucketLbl=FREQS.find(f=>f.v===bucket)?.l||freqLbl(bucket);
     const sugFreqOpts=FREQS.map(f=>`<option value="${f.v}"${f.v===bucket?' selected':''}>${esc(f.l)}</option>`).join('');
     const qtyHint=sug.avgQty&&sug.avgQty>1?` · כמות ממוצעת: ${sug.avgQty} יח׳`:'';
-    const flagNote=sug.flagged?`<div style="background:var(--oras);color:var(--ora);border-radius:var(--r2);padding:10px 14px;font-size:13px;margin-bottom:12px">⚠️ הרכישות לא קבועות — בדוק לפני הוספה</div>`:'';
+    const flagNote=sug.flagged?`<div style="background:var(--ambers);color:var(--amber);border-radius:var(--r2);padding:10px 14px;font-size:13px;margin-bottom:12px">⚠️ הרכישות לא קבועות — בדוק לפני הוספה</div>`:'';
     openModal('להוסיף לרשימה הקבועה?',`
       ${flagNote}
       <div style="text-align:center;font-size:32px;margin-bottom:8px">🛍️</div>
@@ -2120,7 +2127,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v96';const A=['.'];
+    const sw=`const C='hs-v97';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
