@@ -65,32 +65,35 @@ async function sendTelegram(token, chatId, text) {
 export default {
   // Cron: runs every Sunday at 6am Israel time (4am UTC)
   // Schedule:
-  //   1st Sunday: weekly + bi-weekly + monthly + bi-monthly (every other month)
+  //   1st Sunday: weekly + bi-weekly + monthly + bi-monthly (odd months: Apr,Jun,Aug,Oct,Dec,Feb)
   //   2nd Sunday: weekly only
   //   3rd Sunday: weekly + bi-weekly
   //   4th Sunday: weekly only
   //   5th Sunday: weekly + bi-weekly
   async scheduled(event, env, ctx) {
     const date = getIsraelDate();
-    const sundayOfMonth = getSundayOfMonth(date);       // 1–5
-    const sendBiweekly  = sundayOfMonth % 2 === 1;      // 1st, 3rd, 5th
+    const sundayOfMonth = getSundayOfMonth(date);
+    const sendBiweekly  = sundayOfMonth % 2 === 1;
     const sendMonthly   = sundayOfMonth === 1;
-    const sendBimonthly = sundayOfMonth === 1 && date.getMonth() % 2 === 1; // Apr,Jun,Aug,Oct,Dec,Feb
+    const sendBimonthly = sundayOfMonth === 1 && date.getMonth() % 2 === 1;
 
     const raw = await env.SHOPPING_DATA.get('list');
     if (!raw) return;
 
-    const {weekly, staples} = JSON.parse(raw);
+    // Stored data is full S — extract weekly + staples
+    const parsed = JSON.parse(raw);
+    const weekly = parsed.weekly || [];
+    const staples = parsed.staples || [];
+
     const msg = buildMessage(weekly, staples, sendBiweekly, sendMonthly, sendBimonthly);
     if (!msg) return;
     await sendTelegram(env.TELEGRAM_TOKEN, env.TELEGRAM_CHAT_ID, msg);
   },
 
-  // HTTP: receives list update from the app
   async fetch(request, env, ctx) {
     const headers = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
 
@@ -98,7 +101,14 @@ export default {
 
     const url = new URL(request.url);
 
-    // POST /update — save list from app
+    // GET /sync — return stored state for cross-device sync
+    if (request.method === 'GET' && url.pathname === '/sync') {
+      const raw = await env.SHOPPING_DATA.get('list');
+      if (!raw) return new Response('null', {headers: {...headers, 'Content-Type': 'application/json'}});
+      return new Response(raw, {headers: {...headers, 'Content-Type': 'application/json'}});
+    }
+
+    // POST /update — save full S from app
     if (request.method === 'POST' && url.pathname === '/update') {
       const body = await request.json();
       await env.SHOPPING_DATA.put('list', JSON.stringify(body));
@@ -109,8 +119,8 @@ export default {
     if (request.method === 'POST' && url.pathname === '/send') {
       const raw = await env.SHOPPING_DATA.get('list');
       if (!raw) return new Response(JSON.stringify({ok: false, error: 'no list'}), {headers});
-      const {weekly, staples} = JSON.parse(raw);
-      const msg = buildMessage(weekly, staples, true, true, true);
+      const parsed = JSON.parse(raw);
+      const msg = buildMessage(parsed.weekly||[], parsed.staples||[], true, true, true);
       if (!msg) return new Response(JSON.stringify({ok: false, error: 'empty list'}), {headers});
       const result = await sendTelegram(env.TELEGRAM_TOKEN, env.TELEGRAM_CHAT_ID, msg);
       return new Response(JSON.stringify({ok: true, result}), {headers});

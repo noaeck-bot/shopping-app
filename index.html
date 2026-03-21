@@ -462,17 +462,52 @@ let S = {
 function load(){
   try{const d=localStorage.getItem('kb3');if(d){const p=JSON.parse(d);S={...S,...p};}}catch(e){}
 }
-function save(){try{localStorage.setItem('kb3',JSON.stringify(S));}catch(e){}syncToWorker();}
-let _syncTimer=null;
+function save(){S.lastModified=Date.now();try{localStorage.setItem('kb3',JSON.stringify(S));}catch(e){}syncToWorker();}
+let _syncTimer=null,_lastSyncedAt=0;
+function syncAgo(){
+  if(!_lastSyncedAt)return'טרם סונכרן';
+  const m=Math.round((Date.now()-_lastSyncedAt)/60000);
+  if(m<1)return'עכשיו';
+  if(m===1)return'לפני דקה';
+  if(m<60)return`לפני ${m} דקות`;
+  const h=Math.round(m/60);
+  return h===1?'לפני שעה':`לפני ${h} שעות`;
+}
 function syncToWorker(){
   if(!S.settings.workerUrl)return;
   clearTimeout(_syncTimer);
   _syncTimer=setTimeout(()=>{
     fetch(S.settings.workerUrl+'/update',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({weekly:S.weekly,staples:S.staples})
-    }).catch(()=>{});
+      body:JSON.stringify(S)
+    }).then(()=>{_lastSyncedAt=Date.now();}).catch(()=>{});
   },3000);
+}
+async function pullFromWorker(){
+  if(!S.settings.workerUrl)return;
+  try{
+    const res=await fetch(S.settings.workerUrl+'/sync');
+    if(!res.ok)return;
+    const remote=await res.json();
+    if(!remote||!remote.lastModified)return;
+    const localTs=S.lastModified||0;
+    const remoteTs=remote.lastModified||0;
+    if(localTs>remoteTs){
+      // Local is newer — push to Worker (catch-up for missed sync)
+      fetch(S.settings.workerUrl+'/update',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(S)
+      }).then(()=>{_lastSyncedAt=Date.now();}).catch(()=>{});
+    }else if(remoteTs>localTs){
+      // Remote is newer — replace local (preserve original lastModified, don't re-push)
+      S={...S,...remote};
+      try{localStorage.setItem('kb3',JSON.stringify(S));}catch(e){}
+      _lastSyncedAt=Date.now();
+      render();
+    }else{
+      _lastSyncedAt=Date.now();
+    }
+  }catch(e){}
 }
 
 // ══════════════════════════════════════════
@@ -1023,13 +1058,14 @@ function openSettings(){
           </select></div>
       </div>
       <button class="btn pri full" id="ssave" style="margin-top:8px">שמור ✓</button></div>
-    <div class="sp-sec"><div class="sp-sec-ttl">Telegram</div>
+    <div class="sp-sec"><div class="sp-sec-ttl">סנכרון / Telegram</div>
       <div class="sp-card">
         <div class="sp-row" style="flex-direction:column;align-items:stretch;gap:8px">
           <div style="font-size:13px;font-weight:600;color:var(--txt2)">🤖 Cloudflare Worker URL</div>
           <input type="url" class="fi" id="swurl" placeholder="https://your-worker.workers.dev" value="${esc(S.settings.workerUrl||'')}">
-          <div style="font-size:12px;color:var(--muted)">לשליחת רשימה לטלגרם כל יום ראשון</div>
+          <div style="font-size:12px;color:var(--muted)">סנכרון בין מכשירים + שליחה לטלגרם כל יום ראשון</div>
         </div>
+        ${S.settings.workerUrl?`<div class="sp-row"><span class="sp-lbl">🔄 סנכרון אחרון</span><span style="color:var(--muted);font-size:13px">${syncAgo()}</span></div>`:''}
       </div></div>
     <div class="sp-sec"><div class="sp-sec-ttl">נתונים</div>
       <div class="sp-card">
@@ -1050,7 +1086,7 @@ function openSettings(){
         <div class="sp-row" style="cursor:pointer" id="sr2"><span class="sp-lbl" style="color:var(--ora)">🗑️ נקה רשימת קניות</span><span>→</span></div>
         <div class="sp-row" style="cursor:pointer" id="sr3"><span class="sp-lbl" style="color:var(--red)">⚠️ איפוס הכל</span><span>→</span></div>
       </div></div>
-    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v102</div>
+    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v103</div>
   </div>`;
   p.querySelector('#sc').onclick=()=>{p.style.display='none';};
   p.querySelector('#ssave').onclick=()=>{
@@ -2147,7 +2183,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v102';const A=['.'];
+    const sw=`const C='hs-v103';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
@@ -2185,6 +2221,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
   if(!S.pendingSuggestions)S.pendingSuggestions=[];
   genWeekly();render();setup();updateKeyBadge();
+  pullFromWorker();
   if(!S.setupDone)setTimeout(openWizard,350);
 });
 </script>
