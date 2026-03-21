@@ -672,6 +672,7 @@ function renderShop(){
   h+=`<div style="display:flex;gap:10px;margin-bottom:16px">
     <button class="btn sec" style="flex:1" data-a="gw">✨ רענן רשימה</button>
     <button class="btn pri" style="flex:1" data-a="open-import">📸 ייבא / הוסף</button>
+    <button class="btn out" style="padding:0 14px;font-size:18px" data-a="share-list" title="שתף רשימה">📤</button>
   </div>`;
   if(S.weekly.length===0){
     h+=`<div class="empty"><div class="empty-ico">🛒</div>
@@ -707,6 +708,29 @@ function renderShop(){
     h+=`<button class="btn out full" data-a="cd" style="margin-bottom:12px">נקה מסומנים (${done.length})</button>`;
   }
   return h;
+}
+function shareList(){
+  const FREQ_SECS=[
+    {max:14,lbl:'📅 שבועי'},{max:21,lbl:'🗓️ דו-שבועי'},
+    {max:35,lbl:'📆 חודשי'},{max:Infinity,lbl:'🗃️ דו-חודשי'},
+  ];
+  const undone=S.weekly.filter(w=>!w.done);
+  if(!undone.length){toast('הרשימה ריקה','wrn');return;}
+  const lines=['🛒 רשימת קניות',''];
+  FREQ_SECS.forEach((sec,i)=>{
+    const prevMax=i>0?FREQ_SECS[i-1].max:0;
+    const items=undone.filter(w=>{const f=S.staples.find(s=>s.id===w.sid)?.f||7;return f<=sec.max&&f>prevMax;});
+    if(!items.length)return;
+    lines.push(sec.lbl);
+    items.forEach(w=>lines.push(`- ${w.n} × ${w.q} ${w.u||'יח׳'}`));
+    lines.push('');
+  });
+  const text=lines.join('\n').trim();
+  if(navigator.share){
+    navigator.share({text}).catch(()=>{});
+  }else{
+    window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  }
 }
 
 // ══════════════════════════════════════════
@@ -1007,7 +1031,7 @@ function openSettings(){
         <div class="sp-row" style="cursor:pointer" id="sr2"><span class="sp-lbl" style="color:var(--ora)">🗑️ נקה רשימת קניות</span><span>→</span></div>
         <div class="sp-row" style="cursor:pointer" id="sr3"><span class="sp-lbl" style="color:var(--red)">⚠️ איפוס הכל</span><span>→</span></div>
       </div></div>
-    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v100</div>
+    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v101</div>
   </div>`;
   p.querySelector('#sc').onclick=()=>{p.style.display='none';};
   p.querySelector('#ssave').onclick=()=>{
@@ -2073,6 +2097,7 @@ function setup(){
     if(a==='rw'){removeW(el.dataset.wid);render();}
     if(a==='cd'){clearDone();render();toast('נוקתה ✓','wrn');}
     if(a==='gw'){genWeekly();render();toast('הרשימה עודכנה ✨','pri');}
+    if(a==='share-list')shareList();
     if(a==='go-shop')setTab('shop');
     if(a==='qadd'){quickAdd(el.dataset.sid);render();const s=S.staples.find(x=>x.id===el.dataset.sid);if(s)toast(`${s.n} נוסף ✓`,'pri');}
     if(a==='fc'){S.catFilt=el.dataset.cat;render();}
@@ -2102,7 +2127,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v100';const A=['.'];
+    const sw=`const C='hs-v101';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
