@@ -454,7 +454,7 @@ const DEFAULT_STAPLES = [
 // ══════════════════════════════════════════
 let S = {
   staples:[], weekly:[],
-  settings:{apiKey:'',model:'claude-opus-4-6'},
+  settings:{apiKey:'',model:'claude-opus-4-6',workerUrl:''},
   tab:'shop', catFilt:'all',
   setupDone:false, wizardStep:0, purchaseLog:[], analysisRecs:null, pendingSuggestions:[],
 };
@@ -462,7 +462,18 @@ let S = {
 function load(){
   try{const d=localStorage.getItem('kb3');if(d){const p=JSON.parse(d);S={...S,...p};}}catch(e){}
 }
-function save(){try{localStorage.setItem('kb3',JSON.stringify(S));}catch(e){}}
+function save(){try{localStorage.setItem('kb3',JSON.stringify(S));}catch(e){}syncToWorker();}
+let _syncTimer=null;
+function syncToWorker(){
+  if(!S.settings.workerUrl)return;
+  clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(()=>{
+    fetch(S.settings.workerUrl+'/update',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({weekly:S.weekly,staples:S.staples})
+    }).catch(()=>{});
+  },3000);
+}
 
 // ══════════════════════════════════════════
 // URGENCY
@@ -1012,6 +1023,14 @@ function openSettings(){
           </select></div>
       </div>
       <button class="btn pri full" id="ssave" style="margin-top:8px">שמור ✓</button></div>
+    <div class="sp-sec"><div class="sp-sec-ttl">Telegram</div>
+      <div class="sp-card">
+        <div class="sp-row" style="flex-direction:column;align-items:stretch;gap:8px">
+          <div style="font-size:13px;font-weight:600;color:var(--txt2)">🤖 Cloudflare Worker URL</div>
+          <input type="url" class="fi" id="swurl" placeholder="https://your-worker.workers.dev" value="${esc(S.settings.workerUrl||'')}">
+          <div style="font-size:12px;color:var(--muted)">לשליחת רשימה לטלגרם כל יום ראשון</div>
+        </div>
+      </div></div>
     <div class="sp-sec"><div class="sp-sec-ttl">נתונים</div>
       <div class="sp-card">
         <div class="sp-row"><span class="sp-lbl">פריטים במאגר</span><span style="color:var(--muted)">${S.staples.length}</span></div>
@@ -1031,12 +1050,13 @@ function openSettings(){
         <div class="sp-row" style="cursor:pointer" id="sr2"><span class="sp-lbl" style="color:var(--ora)">🗑️ נקה רשימת קניות</span><span>→</span></div>
         <div class="sp-row" style="cursor:pointer" id="sr3"><span class="sp-lbl" style="color:var(--red)">⚠️ איפוס הכל</span><span>→</span></div>
       </div></div>
-    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v101</div>
+    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v102</div>
   </div>`;
   p.querySelector('#sc').onclick=()=>{p.style.display='none';};
   p.querySelector('#ssave').onclick=()=>{
     S.settings.apiKey=p.querySelector('#sak').value.trim();
     S.settings.model=p.querySelector('#smod').value;
+    S.settings.workerUrl=p.querySelector('#swurl').value.trim().replace(/\/$/,'');
     save();updateKeyBadge();toast('נשמר ✓','pri');p.style.display='none';
   };
   p.querySelector('#sr0').onclick=()=>{S.setupDone=false;S.wizardStep=0;save();p.style.display='none';openWizard();};
@@ -2127,7 +2147,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v101';const A=['.'];
+    const sw=`const C='hs-v102';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
