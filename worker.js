@@ -4,17 +4,9 @@ function getIsraelDate() {
   return new Date(new Date().toLocaleString('en-US', {timeZone: ISRAEL_TZ}));
 }
 
-function isFirstSundayOfMonth(date) {
-  return date.getDay() === 0 && date.getDate() <= 7;
-}
-
-function isBiweeklySunday(weekNumber) {
-  return weekNumber % 2 === 0;
-}
-
-function getWeekNumber(date) {
-  const start = new Date(date.getFullYear(), 0, 1);
-  return Math.ceil(((date - start) / 86400000 + start.getDay() + 1) / 7);
+// Which Sunday of the month is this? (1=first, 2=second, 3=third, 4=fourth, 5=fifth)
+function getSundayOfMonth(date) {
+  return Math.ceil(date.getDate() / 7);
 }
 
 const FREQ_LABELS = {
@@ -26,7 +18,7 @@ const FREQ_LABELS = {
 
 const SECTION_ORDER = ['📅 שבועי', '🗓️ דו-שבועי', '📆 חודשי', '🗃️ דו-חודשי'];
 
-function buildMessage(weekly, staples, sendBiweekly, sendMonthly) {
+function buildMessage(weekly, staples, sendBiweekly, sendMonthly, sendBimonthly) {
   const stapleMap = {};
   for (const s of (staples || [])) stapleMap[s.id] = s;
 
@@ -37,7 +29,8 @@ function buildMessage(weekly, staples, sendBiweekly, sendMonthly) {
     const freq = staple ? staple.f : 7;
 
     if (freq > 14 && freq <= 21 && !sendBiweekly) continue;
-    if (freq > 21 && !sendMonthly) continue;
+    if (freq > 21 && freq <= 35 && !sendMonthly) continue;
+    if (freq > 35 && !sendBimonthly) continue;
 
     const label = FREQ_LABELS[freq] || '📅 שבועי';
     if (!sections[label]) sections[label] = [];
@@ -71,17 +64,24 @@ async function sendTelegram(token, chatId, text) {
 
 export default {
   // Cron: runs every Sunday at 6am Israel time (4am UTC)
+  // Schedule:
+  //   1st Sunday: weekly + bi-weekly + monthly + bi-monthly (every other month)
+  //   2nd Sunday: weekly only
+  //   3rd Sunday: weekly + bi-weekly
+  //   4th Sunday: weekly only
+  //   5th Sunday: weekly + bi-weekly
   async scheduled(event, env, ctx) {
     const date = getIsraelDate();
-    const weekNum = getWeekNumber(date);
-    const sendBiweekly = isBiweeklySunday(weekNum);
-    const sendMonthly = isFirstSundayOfMonth(date);
+    const sundayOfMonth = getSundayOfMonth(date);       // 1–5
+    const sendBiweekly  = sundayOfMonth % 2 === 1;      // 1st, 3rd, 5th
+    const sendMonthly   = sundayOfMonth === 1;
+    const sendBimonthly = sundayOfMonth === 1 && date.getMonth() % 2 === 1; // Apr,Jun,Aug,Oct,Dec,Feb
 
     const raw = await env.SHOPPING_DATA.get('list');
     if (!raw) return;
 
     const {weekly, staples} = JSON.parse(raw);
-    const msg = buildMessage(weekly, staples, sendBiweekly, sendMonthly);
+    const msg = buildMessage(weekly, staples, sendBiweekly, sendMonthly, sendBimonthly);
     if (!msg) return;
     await sendTelegram(env.TELEGRAM_TOKEN, env.TELEGRAM_CHAT_ID, msg);
   },
@@ -110,7 +110,7 @@ export default {
       const raw = await env.SHOPPING_DATA.get('list');
       if (!raw) return new Response(JSON.stringify({ok: false, error: 'no list'}), {headers});
       const {weekly, staples} = JSON.parse(raw);
-      const msg = buildMessage(weekly, staples, true, true);
+      const msg = buildMessage(weekly, staples, true, true, true);
       if (!msg) return new Response(JSON.stringify({ok: false, error: 'empty list'}), {headers});
       const result = await sendTelegram(env.TELEGRAM_TOKEN, env.TELEGRAM_CHAT_ID, msg);
       return new Response(JSON.stringify({ok: true, result}), {headers});
