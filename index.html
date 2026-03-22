@@ -509,6 +509,21 @@ async function pullFromWorker(){
     }
   }catch(e){}
 }
+async function forcePushToWorker(){
+  if(!S.settings.workerUrl)return;
+  S.lastModified=Date.now();
+  try{localStorage.setItem('kb3',JSON.stringify(S));}catch(e){}
+  clearTimeout(_syncTimer);
+  try{
+    await fetch(S.settings.workerUrl+'/update',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(S)
+    });
+    _lastSyncedAt=Date.now();
+    toast('📤 הנתונים מהמכשיר הזה נשמרו ✓','pri');
+    render();
+  }catch(e){toast('שגיאת סנכרון','err');}
+}
 
 // ══════════════════════════════════════════
 // URGENCY
@@ -1065,7 +1080,8 @@ function openSettings(){
           <input type="url" class="fi" id="swurl" placeholder="https://your-worker.workers.dev" value="${esc(S.settings.workerUrl||'')}">
           <div style="font-size:12px;color:var(--muted)">סנכרון בין מכשירים + שליחה לטלגרם כל יום ראשון</div>
         </div>
-        ${S.settings.workerUrl?`<div class="sp-row"><span class="sp-lbl">🔄 סנכרון אחרון</span><span style="color:var(--muted);font-size:13px">${syncAgo()}</span></div>`:''}
+        ${S.settings.workerUrl?`<div class="sp-row"><span class="sp-lbl">🔄 סנכרון אחרון</span><span style="color:var(--muted);font-size:13px">${syncAgo()}</span></div>
+        <button class="btn sec full" id="sforcepush" style="margin-top:4px;font-size:13px">📤 דחף נתונים מהמכשיר הזה</button>`:''}
       </div></div>
     <div class="sp-sec"><div class="sp-sec-ttl">נתונים</div>
       <div class="sp-card">
@@ -1086,7 +1102,7 @@ function openSettings(){
         <div class="sp-row" style="cursor:pointer" id="sr2"><span class="sp-lbl" style="color:var(--ora)">🗑️ נקה רשימת קניות</span><span>→</span></div>
         <div class="sp-row" style="cursor:pointer" id="sr3"><span class="sp-lbl" style="color:var(--red)">⚠️ איפוס הכל</span><span>→</span></div>
       </div></div>
-    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v103</div>
+    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v104</div>
   </div>`;
   p.querySelector('#sc').onclick=()=>{p.style.display='none';};
   p.querySelector('#ssave').onclick=()=>{
@@ -1095,6 +1111,7 @@ function openSettings(){
     S.settings.workerUrl=p.querySelector('#swurl').value.trim().replace(/\/$/,'');
     save();updateKeyBadge();toast('נשמר ✓','pri');p.style.display='none';
   };
+  if(p.querySelector('#sforcepush'))p.querySelector('#sforcepush').onclick=()=>{p.style.display='none';forcePushToWorker();};
   p.querySelector('#sr0').onclick=()=>{S.setupDone=false;S.wizardStep=0;save();p.style.display='none';openWizard();};
   p.querySelector('#sr1').onclick=()=>{if(confirm('לאפס תאריכים?')){S.staples.forEach(s=>s.lastOrdered=null);save();render();toast('אופס ✓','wrn');p.style.display='none';}};
   p.querySelector('#sr2').onclick=()=>{if(confirm('לנקות את הרשימה?')){S.weekly=[];save();render();toast('נוקתה ✓','wrn');p.style.display='none';}};
@@ -2183,7 +2200,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v103';const A=['.'];
+    const sw=`const C='hs-v104';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
