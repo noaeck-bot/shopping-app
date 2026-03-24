@@ -398,9 +398,9 @@ function optimizedFreq(avgDays,cat){
   return PERISHABLE_CATS.has(cat)?raw:Math.max(raw,30);
 }
 function optimizedQty(typicalQty,avgDays,cat){
-  const raw=freqBucket(avgDays);
   const opt=optimizedFreq(avgDays,cat);
-  return Math.max(1,Math.ceil((typicalQty||1)*opt/raw));
+  // Use actual avgDays (not bucketed) in divisor — avoids qty collapsing near bucket boundaries
+  return Math.max(1,Math.ceil((typicalQty||1)*opt/Math.max(1,avgDays)));
 }
 // Returns true if today falls within the given season (Israel climate)
 function isInSeason(seasonCat){
@@ -1786,8 +1786,11 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
         it.span_days=Math.round((ts[ts.length-1]-ts[0])/86400000);
         it.last_purchase=dates[dates.length-1];
         it.typical_qty=Math.max(1,Math.round(median(allQtys.length?allQtys:[1])));
-        if(!it.unit||it.unit==='גר'||it.unit==='גרם'||it.unit==='gr'||it.unit==='g')
-          it.unit=detectUnit(matchedNames[0])||'יח׳';
+        if(!it.unit||it.unit==='גר'||it.unit==='גרם'||it.unit==='gr'||it.unit==='g'){
+          // Vote across all matched SKUs — use the most common detected unit
+          const uVotes={};matchedNames.forEach(n=>{const u=detectUnit(n)||'יח׳';uVotes[u]=(uVotes[u]||0)+1;});
+          it.unit=Object.entries(uVotes).sort((a,b)=>b[1]-a[1])[0]?.[0]||'יח׳';
+        }
         console.log('[pass]',it.name,'matched:'+matchedNames.length,'count:'+count,'avg:'+avg+'d','qty:'+it.typical_qty,'unit:'+it.unit);
         return true;
       });
@@ -1890,8 +1893,8 @@ function meetsThreshold(count,avg,stddev){
 function checkNewItems(tripItems){
   if(!S.purchaseLog||S.purchaseLog.length<1)return;
   if(!S.pendingSuggestions)S.pendingSuggestions=[];
-  const sixMonthsAgo=Date.now()-180*86400000;
-  const windowLogs=S.purchaseLog.filter(l=>new Date(l.date).getTime()>=sixMonthsAgo);
+  // 18-month window (vs old 6-month) — captures annual seasonal items bought last year
+  const windowLogs=S.purchaseLog.filter(l=>new Date(l.date).getTime()>=Date.now()-548*86400000);
   // Only consider items not already in pantry (check by sid when available, else by name)
   const newItems=tripItems.filter(it=>!S.staples.find(s=>(it.sid&&s.id===it.sid)||normN(s.n)===normN(it.name)));
   newItems.forEach(it=>{
@@ -1927,7 +1930,13 @@ function checkNewItems(tripItems){
     // Freshness gate: pattern must be recent, not just historical
     const dynDays=Math.max(90,avg*4);
     const recentCount=events.filter(e=>e.date>=Date.now()-dynDays*86400000).length;
-    if(recentCount<3)return;
+    if(recentCount<3){
+      // Seasonal bypass: item has 3+ historical purchases AND just appeared in this trip
+      // (recentCount≥1 confirms today's purchase is within the window)
+      // Push as flagged so the modal shows a warning + seasonal picker
+      if(recentCount>=1&&count>=3)S.pendingSuggestions.push({type:'add',name:it.name,count,avg,span,avgQty,flagged:true});
+      return;
+    }
     S.pendingSuggestions.push({type:'add',name:it.name,count,avg,span,avgQty,flagged:thresh.flagged});
   });
 }
@@ -1950,10 +1959,15 @@ function checkRemovals(){
     if(d===null||d<minRemovalDays(s.f))return;
     // Trip gate: within the same window, ≥2 recorded trips where item was absent
     // Protects against false positives during vacations or illness (no trips = no suggestion)
-    const windowStart=Date.now()-minRemovalDays(s.f)*86400000;
+    const windowDays=minRemovalDays(s.f);
+    const windowStart=Date.now()-windowDays*86400000;
     const tripsInWindow=S.purchaseLog.filter(trip=>new Date(trip.date).getTime()>=windowStart);
     const absentTrips=tripsInWindow.filter(trip=>!trip.items.some(item=>(item.sid&&item.sid===s.id)||normN(item.name)===normN(s.n)));
-    if(absentTrips.length<2)return;
+    // Relax to 1 absent trip when logging density is low (< 1 trip/month in window)
+    // Prevents the gate from freezing when user stops recording trips for a while
+    const expectedTrips=Math.max(2,Math.round(windowDays/30));
+    const minAbsent=tripsInWindow.length<Math.floor(expectedTrips*0.5)?1:2;
+    if(absentTrips.length<minAbsent)return;
     S.pendingSuggestions.push({type:'remove',sid:s.id,name:s.n,days:Math.round(d),freq:s.f});
   });
 }
