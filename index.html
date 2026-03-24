@@ -43,9 +43,9 @@ input,select,textarea{font-family:inherit}
 .hdr-btn:active{background:rgba(255,255,255,.2)}
 
 #alert-bar{position:fixed;top:calc(var(--hdr) + var(--st));left:50%;transform:translateX(-50%);
-  width:100%;max-width:600px;background:var(--red);color:#fff;padding:10px 18px;
-  font-size:13px;font-weight:700;z-index:190;text-align:center;display:none;
-  box-shadow:0 2px 8px rgba(239,68,68,.35)}
+  width:100%;max-width:600px;background:var(--mint);color:var(--g1);padding:10px 18px;
+  font-size:13px;font-weight:600;z-index:190;text-align:center;display:none;
+  border-bottom:1px solid rgba(79,138,109,.15)}
 
 #main{max-width:600px;margin:0 auto;
   padding-top:calc(var(--hdr) + var(--st) + 16px);
@@ -301,6 +301,9 @@ input,select,textarea{font-family:inherit}
 .step-dot{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.15);
   display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
 
+.post-shop-cta{font-size:16px!important;padding:16px!important;border-radius:var(--r)!important;
+  margin-bottom:16px!important;box-shadow:0 4px 16px rgba(79,138,109,.3)}
+
 /* ── POST-SHOPPING ── */
 .post-item{display:flex;align-items:center;padding:11px 16px;gap:12px;
   border-bottom:1px solid var(--div);cursor:pointer;transition:background .1s;user-select:none}
@@ -325,9 +328,9 @@ input,select,textarea{font-family:inherit}
 <body>
 
 <header class="hdr">
-  <div class="hdr-title">🛒 קניות בית</div>
+  <div class="hdr-title">🛒 קניות לבית</div>
   <div class="hdr-right">
-    <button class="hdr-btn" id="btn-import" title="ייבוא פריטים">📸</button>
+    <button class="hdr-btn" id="btn-share" title="שתף רשימה">✉️</button>
     <button class="hdr-btn" id="btn-settings" title="הגדרות" style="position:relative">⚙️</button>
   </div>
 </header>
@@ -726,8 +729,6 @@ function wIco(w,size=42){const bg=(CS[w.c]||CS.custom).bg;return w.e?`<div class
 function renderShop(){
   const pend=S.weekly.filter(w=>!w.done);
   const done=S.weekly.filter(w=>w.done);
-  const lastShop=(S.purchaseLog&&S.purchaseLog.length>0)?S.purchaseLog[0]:null;
-  const daysAgo=lastShop?Math.round((Date.now()-new Date(lastShop.date).getTime())/86400000):null;
   let h='';
   if(!S.setupDone){
     h+=`<div class="setup-card">
@@ -740,17 +741,11 @@ function renderShop(){
       <button class="btn" style="background:rgba(255,255,255,.2);color:#fff;width:100%;margin-top:16px;font-size:15px;padding:13px;border-radius:var(--r2)" onclick="openWizard()">התחל הגדרה ←</button>
     </div>`;
   }
-  h+=`<button class="btn out full" data-a="post-shop" style="margin-bottom:12px;border-color:var(--g2);color:var(--g1);font-size:14px;padding:14px">
-    🛍️ חזרתי מהקנייה — עדכן מלאי${daysAgo!==null?` (לפני ${daysAgo} ימים)`:''}</button>`;
-  h+=`<div style="display:flex;gap:10px;margin-bottom:16px">
-    <button class="btn sec" style="flex:1" data-a="gw">✨ רענן רשימה</button>
-    <button class="btn pri" style="flex:1" data-a="open-import">📸 ייבא / הוסף</button>
-    <button class="btn out" style="padding:0 14px;font-size:18px" data-a="share-list" title="שתף רשימה">📤</button>
-  </div>`;
+  h+=`<button class="btn pri full post-shop-cta" data-a="post-shop">🛍️ סיימתי קנייה</button>`;
   if(S.weekly.length===0){
     h+=`<div class="empty"><div class="empty-ico">🛒</div>
       <div class="empty-ttl">הרשימה ריקה</div>
-      <div class="empty-sub">לחץ "רענן רשימה" להוספת פריטים, או "ייבא / הוסף" להוספה ידנית.</div></div>`;
+      <div class="empty-sub">לחץ + להוספת פריט, או עבור למאגר להגדרת פריטים קבועים.</div></div>`;
     return h;
   }
   const FREQ_SECS=[
@@ -779,7 +774,7 @@ function renderShop(){
     h+=`</div></div>`;
   });
   if(done.length>0){
-    h+=`<button class="btn out full" data-a="cd" style="margin-bottom:12px">נקה מסומנים (${done.length})</button>`;
+    h+=`<button class="btn out full" data-a="cd" style="margin-bottom:12px;font-size:13px;color:var(--muted)">נקה מסומנים (${done.length})</button>`;
   }
   return h;
 }
@@ -814,7 +809,8 @@ function renderStaples(){
   const cats=['all',...Object.keys(CS).filter(k=>S.staples.some(s=>s.c===k))];
   const filt=S.catFilt==='all'?S.staples:S.staples.filter(s=>s.c===S.catFilt);
   let h=`<button class="btn pri full" style="margin-bottom:8px" data-a="manual-add">+ הוסף פריט ידנית</button>`;
-  h+=`<button class="btn sec full" style="margin-bottom:12px" data-a="calibrate">✨ כוונן למשפחה שלי</button>`;
+  h+=`<button class="btn sec full" style="margin-bottom:8px" data-a="calibrate">✨ כוונן למשפחה שלי</button>`;
+  h+=`<button class="btn out full" style="margin-bottom:12px" data-a="open-import">📸 ייבא / הוסף</button>`;
   h+=`<div class="chips">`;
   cats.forEach(c=>{
     const lbl=c==='all'?`הכל (${S.staples.filter(s=>s.active).length})`:`${CS[c]?.e||''} ${CS[c]?.l||c}`;
@@ -875,12 +871,13 @@ function render(){
 }
 function updateAlert(){
   const b=document.getElementById('alert-bar'),m=document.getElementById('main');
-  const c=stCounts();
-  if(c.urg>0){b.style.display='block';b.textContent=`🔴 ${c.urg} פריטים דחופים לקנייה!`;m.classList.add('has-alert');}
+  const pend=S.weekly.filter(w=>!w.done).length;
+  if(pend>0){b.style.display='block';b.textContent=`🛒 ${pend} פריטים לקנייה`;m.classList.add('has-alert');}
   else{b.style.display='none';m.classList.remove('has-alert');}
 }
 function setTab(t){
   S.tab=t;document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  if(t==='shop')genWeekly();
   render();window.scrollTo(0,0);
 }
 
@@ -916,14 +913,12 @@ function openAddItem(){
       <div class="fg"><label class="fl">כמות</label><input class="fi" id="aq" value="1"></div>
       <div class="fg"><label class="fl">יחידה</label><input class="fi" id="au" value="יח׳"></div>
     </div>
-    <div class="fg"><label class="fl">קטגוריה</label><select class="fsel" id="ac">${catOpts()}</select></div>
     <button class="btn pri full" id="cad">הוסף ✓</button>`);
   document.getElementById('an').focus();
   document.getElementById('cad').onclick=()=>{
     const n=document.getElementById('an').value.trim();
     if(!n){toast('נא להזין שם','dan');return;}
-    const c=document.getElementById('ac').value;
-    addManualW(n,CS[c]?.e,c,document.getElementById('aq').value,document.getElementById('au').value,true);
+    addManualW(n,CS.custom?.e,'custom',document.getElementById('aq').value,document.getElementById('au').value,true);
     closeModal();setTab('shop');toast(`${n} נוסף לרשימה (חד-פעמי) ✓`,'pri');
   };
   document.getElementById('an').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('cad').click();});
@@ -1115,7 +1110,7 @@ function openSettings(){
         <div class="sp-row" style="cursor:pointer" id="sr2"><span class="sp-lbl" style="color:var(--ora)">🗑️ נקה רשימת קניות</span><span>→</span></div>
         <div class="sp-row" style="cursor:pointer" id="sr3"><span class="sp-lbl" style="color:var(--red)">⚠️ איפוס הכל</span><span>→</span></div>
       </div></div>
-    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.0 · לכל המשפחה 🏡 · hs-v106</div>
+    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.1 · לכל המשפחה 🏡 · hs-v107</div>
   </div>`;
   p.querySelector('#sc').onclick=()=>{p.style.display='none';};
   p.querySelector('#ssave').onclick=()=>{
@@ -1387,25 +1382,26 @@ function switchPSTab(t){
 }
 function openPostShopping(){
   const pend=S.weekly.filter(w=>!w.done);
-  openModal('🛍️ חזרתי מהקנייה',`
+  openModal('🛍️ סיימתי קנייה',`
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:14px;text-align:center">מה קנית? נעדכן את המלאי בבית</div>
     <div class="import-tabs">
-      <div class="import-tab on" id="pstab-manual" onclick="switchPSTab('manual')">✔️ סמן מה קנית</div>
+      <div class="import-tab on" id="pstab-manual" onclick="switchPSTab('manual')">✔️ סמן ברשימה</div>
       <div class="import-tab" id="pstab-receipt" onclick="switchPSTab('receipt')">📸 העלה קבלה</div>
     </div>
     <div id="pspanel-manual">
       ${pend.length===0?`<div class="empty"><div class="empty-ico">🎉</div>
         <div class="empty-ttl">הרשימה ריקה</div>
         <div class="empty-sub">אין פריטים ממתינים ברשימה.</div></div>`:
-        `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">סמן את הפריטים שקנית:</div>
+        `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">הסר סימון ממה שלא קנית:</div>
         <div class="card" id="ps-items">
-          ${pend.map(w=>`<div class="post-item" data-wid="${w.id}" onclick="this.classList.toggle('sel');this.querySelector('.chk').classList.toggle('on')">
+          ${pend.map(w=>`<div class="post-item sel" data-wid="${w.id}" onclick="this.classList.toggle('sel');this.querySelector('.chk').classList.toggle('on')">
             ${catIco(w.c,38)}
             <div class="i-info"><div class="i-name">${esc(w.n)}</div>
               <div class="i-meta">${esc(w.q)} ${esc(w.u)}</div></div>
-            <div class="chk" style="pointer-events:none">✓</div></div>`).join('')}
+            <div class="chk on" style="pointer-events:none">✓</div></div>`).join('')}
         </div>
         <div style="display:flex;gap:9px;margin-top:14px">
-          <button class="btn out sm" onclick="document.querySelectorAll('#ps-items .post-item').forEach(el=>{el.classList.add('sel');el.querySelector('.chk').classList.add('on')})">בחר הכל</button>
+          <button class="btn out sm" onclick="document.querySelectorAll('#ps-items .post-item').forEach(el=>{el.classList.remove('sel');el.querySelector('.chk').classList.remove('on')})">נקה הכל</button>
           <button class="btn pri" style="flex:1" id="ps-confirm">עדכן מלאי ✓</button>
         </div>`}
     </div>
@@ -1436,7 +1432,7 @@ function openPostShopping(){
     checkNewItems(tripItems);
     checkRemovals();
     S.weekly=S.weekly.filter(w=>!w.one_time);
-    save();closeModal();render();
+    save();genWeekly();closeModal();render();
     toast(`${wids.length} פריטים עודכנו ✓`,'pri');
     setTimeout(showNextSuggestion,400);
   };
@@ -2185,7 +2181,7 @@ function toast(msg,type='pri'){
 function setup(){
   document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
   document.getElementById('btn-settings').addEventListener('click',openSettings);
-  document.getElementById('btn-import').addEventListener('click',openImport);
+  document.getElementById('btn-share').addEventListener('click',shareList);
   document.getElementById('fab').addEventListener('click',()=>{
     if(S.tab==='staples')openAddPantryItem();
     else openAddItem();
@@ -2227,7 +2223,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v106';const A=['.'];
+    const sw=`const C='hs-v107';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
