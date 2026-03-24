@@ -460,7 +460,19 @@ let S = {
 };
 
 function load(){
-  try{const d=localStorage.getItem('kb3');if(d){const p=JSON.parse(d);S={...S,...p};}}catch(e){}
+  try{
+    const d=localStorage.getItem('kb3');
+    if(d){
+      const p=JSON.parse(d);
+      S={...S,...p};
+      // Validate critical arrays/objects survive shallow merge intact
+      if(!Array.isArray(S.staples))S.staples=[];
+      if(!Array.isArray(S.weekly))S.weekly=[];
+      if(!Array.isArray(S.purchaseLog))S.purchaseLog=[];
+      if(!Array.isArray(S.pendingSuggestions))S.pendingSuggestions=[];
+      if(!S.settings||typeof S.settings!=='object')S.settings={apiKey:'',model:'claude-opus-4-6',workerUrl:''};
+    }
+  }catch(e){}
 }
 function save(){S.lastModified=Date.now();try{localStorage.setItem('kb3',JSON.stringify(S));}catch(e){}syncToWorker();}
 let _syncTimer=null,_lastSyncedAt=0;
@@ -480,7 +492,7 @@ function syncToWorker(){
     fetch(S.settings.workerUrl+'/update',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(S)
-    }).then(()=>{_lastSyncedAt=Date.now();}).catch(()=>{});
+    }).then(()=>{_lastSyncedAt=Date.now();}).catch(()=>{toast('☁️ שגיאת סנכרון','err');});
   },3000);
 }
 async function pullFromWorker(){
@@ -747,9 +759,10 @@ function renderShop(){
     {max:35, lbl:'📆 חודשי'},
     {max:Infinity, lbl:'🗃️ דו-חודשי'},
   ];
+  const _stMap={};S.staples.forEach(s=>_stMap[s.id]=s);
   FREQ_SECS.forEach((sec,i)=>{
     const prevMax=i>0?FREQ_SECS[i-1].max:0;
-    const items=S.weekly.filter(w=>{const f=S.staples.find(s=>s.id===w.sid)?.f||7;return f<=sec.max&&f>prevMax;});
+    const items=S.weekly.filter(w=>{const f=_stMap[w.sid]?.f||7;return f<=sec.max&&f>prevMax;});
     if(!items.length)return;
     h+=`<div class="card"><div class="grp-hdr">${sec.lbl}</div><div>`;
     items.forEach(w=>{
@@ -825,7 +838,7 @@ function renderStaples(){
       const outOfSeason=s.seasonCat&&!isInSeason(s.seasonCat);
       const meta=outOfSeason
         ?`לא בעונה · ${(CS[s.c]||CS.custom).l}`
-        :s.lastOrdered?`הוזמן לפני ${Math.round(d)} ימים · ${(CS[s.c]||CS.custom).l}`:`${(CS[s.c]||CS.custom).l}`;
+        :s.lastOrdered&&d!=null?`הוזמן לפני ${Math.round(d)} ימים · ${(CS[s.c]||CS.custom).l}`:`${(CS[s.c]||CS.custom).l}`;
       const seasonTag=s.seasonCat
         ?`<span style="font-size:11px;padding:1px 6px;border-radius:10px;margin-right:4px;background:${outOfSeason?'var(--div)':'var(--mint)'};color:${outOfSeason?'var(--muted)':'var(--g1)'}">🌱 ${s.seasonCat}</span>`
         :'';
@@ -1004,7 +1017,7 @@ function openEditStaple(sid){
     const ldv=document.getElementById('eld').value;
     const seas=document.getElementById('eseas').value;
     updStaple(sid,{n,q:document.getElementById('eq').value,u:document.getElementById('eu').value,
-      f:parseInt(document.getElementById('ef').value),
+      f:Math.max(1,parseInt(document.getElementById('ef').value)||7),
       lastOrdered:ldv?new Date(ldv).toISOString():s.lastOrdered,
       seasonCat:seas==='כל השנה'?null:seas});
     closeModal();render();toast('עודכן ✓','pri');
@@ -1033,7 +1046,7 @@ function openAddPantryItem(){
     if(!name){toast('נא להזין שם','dan');return;}
     if(S.staples.find(s=>normN(s.n)===normN(name))){toast(`${name} כבר קיים במאגר`,'dan');return;}
     const cat=document.getElementById('ap-cat')?.value||'custom';
-    const freq=parseInt(document.getElementById('ap-freq')?.value||'7');
+    const freq=Math.max(1,parseInt(document.getElementById('ap-freq')?.value)||7);
     addStaple(name,cat,CS[cat]?.e,document.getElementById('ap-qty')?.value||'1',document.getElementById('ap-unit')?.value.trim()||'יח׳',freq,true);
     closeModal();render();toast(`${esc(name)} נוסף למאגר ✓`,'pri');
   };
@@ -1507,7 +1520,7 @@ async function analyzeFiles(files){
     const txt=data.content[0]?.text||'';
     const jsonStr=extractJSON(txt);
     if(!jsonStr)throw new Error('No JSON found in response. Try again.');
-    const result=JSON.parse(jsonStr);
+    let result;try{result=JSON.parse(jsonStr);}catch(e){throw new Error('תגובת AI לא תקינה. נסה שוב.');}
     closeModal();
     // Add items to weekly list
     let added=0;
@@ -1736,7 +1749,7 @@ CRITICAL: Never invent or estimate purchase_count. Count actual order appearance
     const rawTxt=data.content[0]?.text||'';
     const jsonStr=extractJSON(rawTxt);
     if(!jsonStr)throw new Error('No JSON in response (stop_reason:'+data.stop_reason+'). Try again.');
-    const result=JSON.parse(jsonStr);
+    let result;try{result=JSON.parse(jsonStr);}catch(e){throw new Error('תגובת AI לא תקינה. נסה שוב.');}
     // For JSON path: AI grouped SKUs semantically, JS recalculates all numbers from raw dates
     if(preCalcSkus){
       const EXCL=new Set(['exclude','hygiene']);
@@ -1830,7 +1843,7 @@ async function analyzeReceipt(files){
     const txt=data.content[0]?.text||'';
     const jsonStr=extractJSON(txt);
     if(!jsonStr)throw new Error('No JSON found in response. Try again.');
-    const result=JSON.parse(jsonStr);
+    let result;try{result=JSON.parse(jsonStr);}catch(e){throw new Error('תגובת AI לא תקינה. נסה שוב.');}
     const names=(result.items||[]).map(i=>i.name).filter(Boolean);
     const updated=markItemsReceived(names);
     const tripItems=names.map(name=>{
@@ -2092,7 +2105,7 @@ Return JSON only:
     const txt=data.content[0]?.text||'';
     const jsonStr=extractJSON(txt);
     if(!jsonStr)throw new Error('No suggestions returned.');
-    const result=JSON.parse(jsonStr);
+    let result;try{result=JSON.parse(jsonStr);}catch(e){throw new Error('תגובת AI לא תקינה. נסה שוב.');}
     const sugs=(result.suggestions||[]).filter(s=>S.staples.find(x=>x.id===s.id));
     if(!sugs.length){closeModal();toast('כל התדירויות נראות טוב ✓','pri');return;}
     const sugsH=sugs.map(s=>{
@@ -2237,6 +2250,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     return log;
   });
   if(!S.pendingSuggestions)S.pendingSuggestions=[];
+  // Drop any malformed entries (e.g. stale format from old versions)
+  S.pendingSuggestions=S.pendingSuggestions.filter(s=>s&&(s.type==='add'||s.type==='remove'));
   genWeekly();render();setup();updateKeyBadge();
   pullFromWorker();
   if(!S.setupDone)setTimeout(openWizard,350);
