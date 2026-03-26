@@ -303,6 +303,7 @@ input,select,textarea{font-family:inherit}
 
 .post-shop-cta{font-size:16px!important;padding:16px!important;border-radius:var(--r)!important;
   margin-bottom:16px!important;box-shadow:0 4px 16px rgba(79,138,109,.3)}
+details[open] #ps-extra-arrow{transform:rotate(90deg)}
 
 /* ── POST-SHOPPING ── */
 .post-item{display:flex;align-items:center;padding:11px 16px;gap:12px;
@@ -1110,7 +1111,7 @@ function openSettings(){
         <div class="sp-row" style="cursor:pointer" id="sr2"><span class="sp-lbl" style="color:var(--ora)">🗑️ נקה רשימת קניות</span><span>→</span></div>
         <div class="sp-row" style="cursor:pointer" id="sr3"><span class="sp-lbl" style="color:var(--red)">⚠️ איפוס הכל</span><span>→</span></div>
       </div></div>
-    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.1 · לכל המשפחה 🏡 · hs-v107</div>
+    <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">קניות בית v2.1 · לכל המשפחה 🏡 · hs-v108</div>
   </div>`;
   p.querySelector('#sc').onclick=()=>{p.style.display='none';};
   p.querySelector('#ssave').onclick=()=>{
@@ -1382,6 +1383,10 @@ function switchPSTab(t){
 }
 function openPostShopping(){
   const pend=S.weekly.filter(w=>!w.done);
+  // Off-list: active pantry items not already on the weekly list (by sid or name)
+  const weeklyIds=new Set(S.weekly.map(w=>w.sid).filter(Boolean));
+  const weeklyNames=new Set(S.weekly.map(w=>normN(w.n)));
+  const offList=S.staples.filter(s=>s.active&&!weeklyIds.has(s.id)&&!weeklyNames.has(normN(s.n)));
   openModal('🛍️ סיימתי קנייה',`
     <div style="font-size:13px;color:var(--txt2);margin-bottom:14px;text-align:center">מה קנית? נעדכן את המלאי בבית</div>
     <div class="import-tabs">
@@ -1404,6 +1409,19 @@ function openPostShopping(){
           <button class="btn out sm" onclick="document.querySelectorAll('#ps-items .post-item').forEach(el=>{el.classList.remove('sel');el.querySelector('.chk').classList.remove('on')})">נקה הכל</button>
           <button class="btn pri" style="flex:1" id="ps-confirm">עדכן מלאי ✓</button>
         </div>`}
+      ${offList.length===0?'':
+        `<details style="margin-top:14px">
+          <summary style="font-size:13px;color:var(--txt2);cursor:pointer;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px">
+            <span id="ps-extra-arrow" style="font-size:11px;transition:transform .2s">▶</span> גם קניתי משהו שלא ברשימה (${offList.length})
+          </summary>
+          <div class="card" id="ps-extra" style="margin-top:8px">
+            ${offList.map(s=>`<div class="post-item" data-sid="${s.id}" onclick="this.classList.toggle('sel');this.querySelector('.chk').classList.toggle('on')">
+              ${catIco(s.c,38)}
+              <div class="i-info"><div class="i-name">${esc(s.n)}</div>
+                <div class="i-meta">${esc(s.q)} ${esc(s.u)}</div></div>
+              <div class="chk" style="pointer-events:none">✓</div></div>`).join('')}
+          </div>
+        </details>`}
     </div>
     <div id="pspanel-receipt" style="display:none">
       <div class="upload-area" id="ps-uarea">
@@ -1418,6 +1436,7 @@ function openPostShopping(){
   // Manual confirm
   const psconf=document.getElementById('ps-confirm');
   if(psconf)psconf.onclick=()=>{
+    const now=new Date().toISOString();
     const sel=Array.from(document.querySelectorAll('#ps-items .post-item.sel'));
     const wids=sel.map(el=>el.dataset.wid);
     const tripItems=[];
@@ -1425,7 +1444,13 @@ function openPostShopping(){
       const w=S.weekly.find(x=>x.id===wid);if(!w)return;
       w.done=true;
       tripItems.push({sid:w.sid||null,name:w.n,qty:Math.max(1,parseFloat(w.q)||1)});
-      if(w.sid){const st=S.staples.find(s=>s.id===w.sid);if(st)st.lastOrdered=new Date().toISOString();}
+      if(w.sid){const st=S.staples.find(s=>s.id===w.sid);if(st)st.lastOrdered=now;}
+    });
+    // Extra (off-list) items: just update lastOrdered, no weekly interaction
+    Array.from(document.querySelectorAll('#ps-extra .post-item.sel')).forEach(el=>{
+      const st=S.staples.find(s=>s.id===el.dataset.sid);if(!st)return;
+      st.lastOrdered=now;
+      tripItems.push({sid:st.id,name:st.n,qty:Math.max(1,parseFloat(st.q)||1)});
     });
     recordPurchase(tripItems,'manual');
     if(!S.pendingSuggestions)S.pendingSuggestions=[];
@@ -1433,7 +1458,7 @@ function openPostShopping(){
     checkRemovals();
     S.weekly=S.weekly.filter(w=>!w.one_time);
     save();genWeekly();closeModal();render();
-    toast(`${wids.length} פריטים עודכנו ✓`,'pri');
+    toast(`${tripItems.length} פריטים עודכנו ✓`,'pri');
     setTimeout(showNextSuggestion,400);
   };
   // Receipt file input
@@ -2223,7 +2248,7 @@ function setupPWA(){
     lnk.href=c.toDataURL('image/png');
   }catch(e){}
   if('serviceWorker' in navigator){
-    const sw=`const C='hs-v107';const A=['.'];
+    const sw=`const C='hs-v108';const A=['.'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('.'))));});`;
